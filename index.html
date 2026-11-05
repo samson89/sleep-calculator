@@ -322,11 +322,53 @@
       border-color: var(--accent);
     }
 
+    /* Soonest bedtime that hasn't passed yet ("Wake up at…" tab only). */
+    .result.next {
+      border-color: var(--confirm);
+      box-shadow: inset 0 0 0 1px var(--confirm); /* 2px total, stands out from amber */
+    }
+
     .result-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 0.75rem;
+    }
+
+    /* Highlighted card ("Wake up at…" tab): the soonest bedtime still ahead.
+       Wide:    time | pill           Compact (not enough room side by side):
+                meta | countdown        time pill
+       (no pill: countdown centred         meta
+        top to bottom on the right)              countdown            */
+    .result.next {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      column-gap: 0.75rem;
+      row-gap: 0.25rem;
+    }
+
+    .result.next.has-pill { grid-template-areas: "time pill" "meta countdown"; }
+    .result.next:not(.has-pill) { grid-template-areas: "time countdown" "meta countdown"; }
+
+    .result.next.compact { grid-template-columns: auto minmax(0, 1fr); }
+    .result.next.compact.has-pill { grid-template-areas: "time pill" "meta meta" "countdown countdown"; }
+    .result.next.compact:not(.has-pill) { grid-template-areas: "time time" "meta meta" "countdown countdown"; }
+
+    .result.next .result-time { grid-area: time; justify-self: start; }
+    .result.next .result-meta { grid-area: meta; justify-self: start; white-space: nowrap; }
+    .result.next .badge { grid-area: pill; justify-self: end; }
+    .result.next.compact .badge { justify-self: start; }
+
+    /* Green, bold, slightly smaller than the time, flush with the card's right padding. */
+    .countdown {
+      grid-area: countdown;
+      justify-self: end;
+      color: var(--confirm);
+      font-size: 1.375rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
     }
 
     .result-time {
@@ -496,29 +538,72 @@
         (open ? fallCenter : fallChip).focus();
       }
 
-      function resultItem(date, cycles) {
-        var li = document.createElement('li');
-        li.className = 'result' + (RECOMMENDED[cycles] ? ' recommended' : '');
+      // "in 1 min", "in 55 mins", "in 1h 15 mins", "in 2h".
+      function formatCountdown(minutes) {
+        if (minutes <= 0) return 'now';
+        var h = Math.floor(minutes / 60);
+        var m = minutes % 60;
+        var mins = m ? m + (m === 1 ? ' min' : ' mins') : '';
+        return 'in ' + (h ? h + 'h' + (mins ? ' ' + mins : '') : mins);
+      }
 
-        var top = document.createElement('div');
-        top.className = 'result-top';
+      function resultItem(date, cycles, countdownMinutes) {
+        var isNext = countdownMinutes !== undefined;
+        var isRecommended = !!RECOMMENDED[cycles];
+        var li = document.createElement('li');
+        li.className = 'result' + (isRecommended ? ' recommended' : '') +
+          (isNext ? ' next' + (isRecommended ? ' has-pill' : '') : '');
+
         var time = document.createElement('div');
         time.className = 'result-time';
         time.textContent = formatTime(date);
         var meta = document.createElement('div');
         meta.className = 'result-meta';
         meta.textContent = formatDuration(cycles * CYCLE_MIN) + ' of sleep · ' + cycles + (cycles === 1 ? ' cycle' : ' cycles');
-        top.appendChild(time);
-
-        if (RECOMMENDED[cycles]) {
-          var badge = document.createElement('span');
+        var badge = null;
+        if (isRecommended) {
+          badge = document.createElement('span');
           badge.className = 'badge';
           badge.textContent = 'Recommended';
-          top.appendChild(badge);
         }
+
+        if (isNext) {
+          // Highlighted card: a flat grid (see .result.next in the CSS).
+          var countdown = document.createElement('div');
+          countdown.className = 'countdown';
+          var hiddenLabel = document.createElement('span');
+          hiddenLabel.className = 'visually-hidden';
+          hiddenLabel.textContent = 'Next bedtime, ';
+          countdown.appendChild(hiddenLabel);
+          countdown.appendChild(document.createTextNode(formatCountdown(countdownMinutes)));
+          li.appendChild(time);
+          if (badge) li.appendChild(badge);
+          li.appendChild(meta);
+          li.appendChild(countdown);
+          return li;
+        }
+
+        var top = document.createElement('div');
+        top.className = 'result-top';
+        top.appendChild(time);
+        if (badge) top.appendChild(badge);
         li.appendChild(top);
         li.appendChild(meta);
         return li;
+      }
+
+      // Use the side-by-side layout for the highlighted card only when it fits;
+      // otherwise switch to the compact (stacked) layout.
+      function fitNextCard() {
+        var li = resultsEl.querySelector('.result.next');
+        if (!li) return;
+        li.classList.remove('compact');
+        var cs = getComputedStyle(li);
+        var available = li.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+        var w = function (sel) { var el = li.querySelector(sel); return el ? el.getBoundingClientRect().width : 0; };
+        var needed = Math.max(w('.result-time'), w('.result-meta')) + parseFloat(cs.columnGap) +
+          Math.max(w('.badge'), w('.countdown'));
+        if (needed > available + 0.5) li.classList.add('compact');
       }
 
       function renderResults() {
@@ -535,13 +620,25 @@
             resultsEl.appendChild(empty);
             return;
           }
-          var wake = new Date();
+          var nowMs = Date.now();
+          // Next time the clock reads the chosen wake-up time (today or tomorrow).
+          var wake = new Date(nowMs);
           wake.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+          if (wake.getTime() <= nowMs) wake.setDate(wake.getDate() + 1);
+
+          // Highlight the soonest bedtime that hasn't passed yet: the most cycles still possible.
+          var nextCycles = 0;
+          for (cycles = 6; cycles >= 1; cycles--) {
+            if (addMinutes(wake, -(cycles * CYCLE_MIN + fallMinutes)).getTime() >= nowMs) { nextCycles = cycles; break; }
+          }
+
           // 6 cycles at the top (earliest bedtime) down to 1 cycle at the bottom.
           for (cycles = 6; cycles >= 1; cycles--) {
             var bedtime = addMinutes(wake, -(cycles * CYCLE_MIN + fallMinutes));
-            resultsEl.appendChild(resultItem(bedtime, cycles));
+            var countdownMinutes = cycles === nextCycles ? Math.ceil((bedtime.getTime() - nowMs) / 60000) : undefined;
+            resultsEl.appendChild(resultItem(bedtime, cycles, countdownMinutes));
           }
+          fitNextCard();
         } else {
           resultsTitle.textContent = 'Wake up at';
           var now = new Date();
@@ -609,11 +706,14 @@
         renderResults();
       });
 
-      // Keep "Go to bed now" current.
-      setInterval(function () { if (mode === 'now') renderResults(); }, 15000);
+      // Keep "Go to bed now" and the "Wake up at…" countdown current.
+      setInterval(renderResults, 15000);
       document.addEventListener('visibilitychange', function () {
-        if (!document.hidden && mode === 'now') renderResults();
+        if (!document.hidden) renderResults();
       });
+
+      window.addEventListener('resize', fitNextCard);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitNextCard);
 
       renderFall();
       setMode(mode);
