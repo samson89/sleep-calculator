@@ -591,10 +591,13 @@
         return (h % 12 || 12) + ':' + (m < 10 ? '0' : '') + m + ' ' + (h < 12 ? 'AM' : 'PM');
       }
 
-      // shortcuts://run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM
+      // shortcuts://x-callback-url/run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM&x-success=…
+      // The x-success/x-cancel/x-error addresses bring you back to this page when the Shortcut finishes.
       function alarmUrl(date) {
-        return 'shortcuts://run-shortcut?name=' + encodeURIComponent(SHORTCUT_NAME) +
-          '&input=text&text=' + encodeURIComponent(alarmText(date)).replace(/%3A/g, ':');
+        var back = encodeURIComponent(location.href.split('#')[0]);
+        return 'shortcuts://x-callback-url/run-shortcut?name=' + encodeURIComponent(SHORTCUT_NAME) +
+          '&input=text&text=' + encodeURIComponent(alarmText(date)).replace(/%3A/g, ':') +
+          '&x-success=' + back + '&x-cancel=' + back + '&x-error=' + back;
       }
 
       // The time on a result card: a tappable alarm link on Apple devices, plain text elsewhere.

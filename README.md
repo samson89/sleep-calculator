@@ -34,8 +34,10 @@ On other devices (Android, Windows, Linux) the times are shown as plain text, be
 Tapping a time opens a link like this:
 
 ```
-shortcuts://run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM
+shortcuts://x-callback-url/run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM&x-success=https%3A%2F%2Fsamson89.github.io%2Fsleep-calculator%2F&x-cancel=…&x-error=…
 ```
+
+iOS briefly switches to the Shortcuts app to run the Shortcut, then the `x-success` address brings you back to the page (`x-cancel` and `x-error` do the same if the Shortcut is cancelled or fails).
 
 The time is always sent in English 12-hour format (`6:15 AM`, `9:45 PM`), even if your device uses a 24-hour clock or another language, because that's the format the Shortcut reads reliably.
 
