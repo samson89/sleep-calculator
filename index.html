@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0e1116">
+  <meta name="description" content="Find the best times to go to bed or wake up, based on 90-minute sleep cycles.">
+  <title>Sleep Calculator</title>
+  <style>
+    /* Dark-only theme. Off-black background and off-white text reduce glare;
+       a warm amber accent avoids bright blue light at night.
+       All text/background pairs meet WCAG 2.2 AA (4.5:1) or better. */
+    :root {
+      color-scheme: dark;
+      --bg: #0e1116;          /* page background */
+      --surface: #161a21;     /* cards */
+      --surface-2: #1e232c;   /* inputs, buttons */
+      --border: #3a4250;      /* decorative card outlines */
+      --control-border: #6b7485; /* outlines of interactive controls (>= 3:1) */
+      --text: #e3e5ea;        /* primary text */
+      --text-muted: #a9b0bd;  /* secondary text */
+      --hover: #272d38;       /* hovered control background */
+      --accent: #f0b46a;      /* warm amber */
+      --on-accent: #1a1208;   /* text on amber */
+      --accent-hover: #f5c78f; /* lighter amber for hovered amber buttons */
+      --confirm: #5cbf85;     /* soft green checkmark (>= 6:1 on controls) */
+      --focus: #f0b46a;
+      --radius: 14px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    [hidden] { display: none !important; }
+
+    html { -webkit-text-size-adjust: 100%; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 1.125rem; /* 18px */
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    main {
+      max-width: 30rem;
+      margin: 0 auto;
+      padding: 2rem 1rem 3rem;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      line-height: 1.2;
+      margin: 0 0 0.25rem;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 0 0 1.5rem;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    :focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    /* ---------- Tabs ---------- */
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.25rem;
+      padding: 0.25rem;
+      background: var(--surface);
+      border: 1px solid var(--control-border);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+    }
+
+    .tab {
+      appearance: none;
+      border: 0;
+      border-radius: calc(var(--radius) - 4px);
+      background: transparent;
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      min-height: 48px;
+      padding: 0.5rem;
+      cursor: pointer;
+    }
+
+    .tab[aria-selected="true"] {
+      background: var(--accent);
+      color: var(--on-accent);
+    }
+
+    /* ---------- Cards ---------- */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .field-label {
+      display: block;
+      font-weight: 600;
+      margin: 0 0 0.5rem;
+    }
+
+    /* iOS Safari gives time fields a built-in minimum width and native styling
+       that push them past width: 100%. Turning those off keeps it in the card. */
+    input[type="time"] {
+      -webkit-appearance: none;
+      appearance: none;
+      display: block;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      min-height: 56px;
+      padding: 0.5rem 0.75rem;
+      font: inherit;
+      font-size: 1.5rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      background: var(--surface-2);
+      border: 1px solid var(--control-border);
+      border-radius: 10px;
+    }
+
+    input[type="time"]::-webkit-date-and-time-value {
+      text-align: left;
+    }
+
+    .now-time {
+      font-size: 2rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      margin: 0;
+    }
+
+    /* ---------- Time to fall asleep ---------- */
+    .fall {
+      margin-top: 0.75rem;
+      text-align: center; /* centres the collapsed chip */
+    }
+
+    .chip,
+    .step-center {
+      appearance: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      min-height: 48px;
+      padding: 0.25rem 1rem;
+      border: 1px solid var(--control-border);
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--text);
+      font: inherit;
+      font-size: 1rem;
+      line-height: 1.25;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .chip:hover,
+    .step-center:hover {
+      background: var(--hover);
+      border-color: var(--text-muted);
+    }
+
+    .chip-value {
+      color: var(--accent);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .chevron {
+      width: 1rem;
+      height: 1rem;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .step-center {
+      min-height: 56px;
+      padding: 0.25rem 1rem;
+    }
+
+    .check {
+      width: 1.75rem;  /* 28px: easy to see and recognise as "confirm" */
+      height: 1.75rem;
+      flex-shrink: 0;
+      fill: none;
+      stroke: var(--confirm);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* ---------- Stepper ---------- */
+    /* −, value and + sit together with a small 2px gap between them. */
+    .stepper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+
+    .step-btn {
+      appearance: none;
+      flex-shrink: 0;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 1px solid var(--accent);
+      background: var(--accent);   /* amber, like the selected tab */
+      color: var(--on-accent);
+      font: inherit;
+      font-size: 1.75rem;
+      line-height: 1;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .step-btn:hover:not(:disabled) {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .step-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .step-value {
+      color: var(--accent); /* matches the amber value on the chip */
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .step-value small {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    /* ---------- Results ---------- */
+    .results-title {
+      font-size: 1.25rem;
+      line-height: 1.3;
+      margin: 1.5rem 0 0.75rem;
+    }
+
+    /* Wraps as one piece on narrow screens instead of breaking mid-phrase. */
+    .results-note {
+      display: inline-block;
+      font-size: 1rem;
+      font-weight: 400;
+      color: var(--text-muted);
+    }
+
+    .results {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.5rem;
+    }
+
+    .result {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.75rem 1rem;
+    }
+
+    .result.recommended {
+      border-color: var(--accent);
+    }
+
+    .result-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .result-time {
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .result-meta {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .badge {
+      flex-shrink: 0;
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 999px;
+      padding: 0.125rem 0.625rem;
+    }
+
+    .empty {
+      color: var(--text-muted);
+    }
+
+    footer {
+      margin-top: 2rem;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    footer p { margin: 0 0 0.5rem; }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Sleep Calculator</h1>
+    <p class="subtitle">Wake up between sleep cycles, not in the middle of one.</p>
+
+    <div class="tabs" role="tablist" aria-label="Calculator mode">
+      <button class="tab" role="tab" id="tab-wake" aria-controls="panel-wake" aria-selected="true">Wake up at…</button>
+      <button class="tab" role="tab" id="tab-now" aria-controls="panel-now" aria-selected="false" tabindex="-1">Go to bed now</button>
+    </div>
+
+    <section class="card" role="tabpanel" id="panel-wake" aria-labelledby="tab-wake">
+      <label class="field-label" for="wake-time">I want to wake up at</label>
+      <input type="time" id="wake-time" value="07:00">
+
+      <!-- Moved into whichever tab panel is showing. -->
+      <div class="fall" id="fall">
+        <button type="button" class="chip" id="fall-chip" aria-expanded="false" aria-controls="fall-stepper">
+          <span aria-hidden="true">🌙</span>
+          <span><span class="chip-value" id="chip-value">15 min</span> to fall asleep</span>
+          <svg class="chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>
+        </button>
+
+        <div class="stepper" id="fall-stepper" hidden>
+          <button class="step-btn" type="button" id="fall-minus" aria-label="Decrease by 1 minute">−</button>
+          <button class="step-center" type="button" id="fall-center" aria-expanded="true" aria-label="15 min to fall asleep, tap to confirm">
+            <span class="step-value"><span id="fall-number">15</span> <small>min</small></span>
+            <svg class="check" viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8"/></svg>
+          </button>
+          <button class="step-btn" type="button" id="fall-plus" aria-label="Increase by 1 minute">+</button>
+        </div>
+
+        <p class="visually-hidden" id="fall-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="card" role="tabpanel" id="panel-now" aria-labelledby="tab-now" hidden>
+      <p class="field-label">If you go to bed now</p>
+      <p class="now-time" id="now-time">--:--</p>
+    </section>
+
+    <h2 class="results-title" id="results-title"><span id="results-main">Go to bed at</span> <span class="results-note">· includes <span id="results-fall">15</span> min to fall asleep</span></h2>
+    <ul class="results" id="results" aria-labelledby="results-title"></ul>
+
+    <footer>
+      <p>One sleep cycle is about 90 minutes. Most adults need 5–6 cycles (7½–9 hours).</p>
+      <p>Cycle length varies from person to person. This is a guide, not medical advice.</p>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      var CYCLE_MIN = 90;
+      var MIN_FALL = 0;
+      var MAX_FALL = 120;
+      var RECOMMENDED = { 5: true, 6: true };
+
+      var tabWake = document.getElementById('tab-wake');
+      var tabNow = document.getElementById('tab-now');
+      var panelWake = document.getElementById('panel-wake');
+      var panelNow = document.getElementById('panel-now');
+      var wakeInput = document.getElementById('wake-time');
+      var nowTimeEl = document.getElementById('now-time');
+      var fallWrap = document.getElementById('fall');
+      var fallChip = document.getElementById('fall-chip');
+      var chipValue = document.getElementById('chip-value');
+      var fallStepper = document.getElementById('fall-stepper');
+      var fallCenter = document.getElementById('fall-center');
+      var fallNumber = document.getElementById('fall-number');
+      var fallStatus = document.getElementById('fall-status');
+      var fallMinus = document.getElementById('fall-minus');
+      var fallPlus = document.getElementById('fall-plus');
+      var resultsMain = document.getElementById('results-main');
+      var resultsFall = document.getElementById('results-fall');
+      var resultsEl = document.getElementById('results');
+
+      var mode = 'wake';
+      var fallMinutes = 15;
+
+      // Remember the viewer's preferences on this device (optional convenience).
+      try {
+        var savedFall = parseInt(localStorage.getItem('sc-fall'), 10);
+        if (!isNaN(savedFall) && savedFall >= MIN_FALL && savedFall <= MAX_FALL) fallMinutes = savedFall;
+        var savedMode = localStorage.getItem('sc-mode');
+        if (savedMode === 'wake' || savedMode === 'now') mode = savedMode;
+        var savedWake = localStorage.getItem('sc-wake');
+        if (savedWake && /^\d{2}:\d{2}$/.test(savedWake)) wakeInput.value = savedWake;
+      } catch (e) { /* storage unavailable: use defaults */ }
+
+      function save(key, value) {
+        try { localStorage.setItem(key, value); } catch (e) { /* ignore */ }
+      }
+
+      // Uses the device's own 12- or 24-hour preference.
+      var timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+      function formatTime(date) { return timeFormat.format(date); }
+
+      function formatDuration(totalMinutes) {
+        var h = Math.floor(totalMinutes / 60);
+        var m = totalMinutes % 60;
+        return m ? h + 'h ' + m + 'm' : h + 'h';
+      }
+
+      function addMinutes(date, minutes) {
+        return new Date(date.getTime() + minutes * 60000);
+      }
+
+      function renderFall() {
+        chipValue.textContent = fallMinutes + ' min';
+        fallNumber.textContent = fallMinutes;
+        fallCenter.setAttribute('aria-label', fallMinutes + ' min to fall asleep, tap to confirm');
+        resultsFall.textContent = fallMinutes;
+        fallMinus.disabled = fallMinutes <= MIN_FALL;
+        fallPlus.disabled = fallMinutes >= MAX_FALL;
+      }
+
+      // Collapsed chip <-> expanded stepper. Always starts collapsed.
+      function setExpanded(open) {
+        fallChip.hidden = open;
+        fallStepper.hidden = !open;
+        (open ? fallCenter : fallChip).focus();
+      }
+
+      function resultItem(date, cycles) {
+        var li = document.createElement('li');
+        li.className = 'result' + (RECOMMENDED[cycles] ? ' recommended' : '');
+
+        var top = document.createElement('div');
+        top.className = 'result-top';
+        var time = document.createElement('div');
+        time.className = 'result-time';
+        time.textContent = formatTime(date);
+        var meta = document.createElement('div');
+        meta.className = 'result-meta';
+        meta.textContent = formatDuration(cycles * CYCLE_MIN) + ' of sleep · ' + cycles + (cycles === 1 ? ' cycle' : ' cycles');
+        top.appendChild(time);
+
+        if (RECOMMENDED[cycles]) {
+          var badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = 'Recommended';
+          top.appendChild(badge);
+        }
+        li.appendChild(top);
+        li.appendChild(meta);
+        return li;
+      }
+
+      function renderResults() {
+        resultsEl.innerHTML = '';
+        var cycles;
+
+        if (mode === 'wake') {
+          resultsMain.textContent = 'Go to bed at';
+          var parts = (wakeInput.value || '').split(':');
+          if (parts.length !== 2) {
+            var empty = document.createElement('li');
+            empty.className = 'empty';
+            empty.textContent = 'Choose a wake-up time to see bedtimes.';
+            resultsEl.appendChild(empty);
+            return;
+          }
+          var wake = new Date();
+          wake.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+          // 6 cycles at the top (earliest bedtime) down to 1 cycle at the bottom.
+          for (cycles = 6; cycles >= 1; cycles--) {
+            var bedtime = addMinutes(wake, -(cycles * CYCLE_MIN + fallMinutes));
+            resultsEl.appendChild(resultItem(bedtime, cycles));
+          }
+        } else {
+          resultsMain.textContent = 'Wake up at';
+          var now = new Date();
+          now.setSeconds(0, 0);
+          nowTimeEl.textContent = formatTime(now);
+          // 1 cycle first = earliest wake time first (chronological).
+          for (cycles = 1; cycles <= 6; cycles++) {
+            var wakeAt = addMinutes(now, fallMinutes + cycles * CYCLE_MIN);
+            resultsEl.appendChild(resultItem(wakeAt, cycles));
+          }
+        }
+      }
+
+      function setMode(next, moveFocus) {
+        mode = next;
+        var isWake = mode === 'wake';
+        tabWake.setAttribute('aria-selected', String(isWake));
+        tabNow.setAttribute('aria-selected', String(!isWake));
+        tabWake.tabIndex = isWake ? 0 : -1;
+        tabNow.tabIndex = isWake ? -1 : 0;
+        panelWake.hidden = !isWake;
+        panelNow.hidden = isWake;
+        (isWake ? panelWake : panelNow).appendChild(fallWrap);
+        if (moveFocus) (isWake ? tabWake : tabNow).focus();
+        save('sc-mode', mode);
+        renderResults();
+      }
+
+      function changeFall(delta, button) {
+        var next = Math.min(MAX_FALL, Math.max(MIN_FALL, fallMinutes + delta));
+        if (next === fallMinutes) return;
+        fallMinutes = next;
+        save('sc-fall', String(fallMinutes));
+        renderFall();
+        renderResults();
+        fallStatus.textContent = fallMinutes + ' minutes to fall asleep';
+        // A button that just became disabled can't keep focus; move it to the value.
+        if (button.disabled) fallCenter.focus();
+      }
+
+      tabWake.addEventListener('click', function () { setMode('wake'); });
+      tabNow.addEventListener('click', function () { setMode('now'); });
+
+      // Arrow keys move between tabs (standard tablist behaviour).
+      [tabWake, tabNow].forEach(function (tab) {
+        tab.addEventListener('keydown', function (e) {
+          if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End') {
+            e.preventDefault();
+            var target = (e.key === 'Home') ? 'wake' : (e.key === 'End') ? 'now' : (mode === 'wake' ? 'now' : 'wake');
+            setMode(target, true);
+          }
+        });
+      });
+
+      fallMinus.addEventListener('click', function () { changeFall(-1, fallMinus); });
+      fallPlus.addEventListener('click', function () { changeFall(1, fallPlus); });
+      fallChip.addEventListener('click', function () { setExpanded(true); });
+      fallCenter.addEventListener('click', function () { setExpanded(false); });
+      fallStepper.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { e.preventDefault(); setExpanded(false); }
+      });
+
+      wakeInput.addEventListener('input', function () {
+        if (wakeInput.value) save('sc-wake', wakeInput.value);
+        renderResults();
+      });
+
+      // Keep "Go to bed now" current.
+      setInterval(function () { if (mode === 'now') renderResults(); }, 15000);
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && mode === 'now') renderResults();
+      });
+
+      renderFall();
+      setMode(mode);
+    })();
+  </script>
+</body>
+</html>
