@@ -129,6 +129,7 @@
       font: inherit;
       font-size: 1.5rem;
       font-variant-numeric: tabular-nums;
+      text-align: center;
       color: var(--text);
       background: var(--surface-2);
       border: 1px solid var(--control-border);
@@ -136,10 +137,21 @@
     }
 
     input[type="time"]::-webkit-date-and-time-value {
-      text-align: left;
+      text-align: center; /* iOS Safari */
+    }
+
+    /* Chrome/Edge: take the clock icon out of the text flow so the time stays centred. */
+    input[type="time"] { position: relative; }
+    input[type="time"]::-webkit-calendar-picker-indicator {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
     }
 
     .now-time {
+      text-align: center;
       font-size: 2rem;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
@@ -152,7 +164,31 @@
       text-align: center; /* centres the collapsed chip */
     }
 
-    .chip,
+    /* Plain text button: no outline or background, just the text and chevron. */
+    .chip {
+      appearance: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      min-height: 48px;
+      padding: 0.25rem 0.5rem;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-size: 1rem;
+      line-height: 1.25;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .chip:hover .chip-label {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
     .step-center {
       appearance: none;
       display: inline-flex;
@@ -172,7 +208,6 @@
       touch-action: manipulation;
     }
 
-    .chip:hover,
     .step-center:hover {
       background: var(--hover);
       border-color: var(--text-muted);
@@ -267,14 +302,6 @@
       margin: 1.5rem 0 0.75rem;
     }
 
-    /* Wraps as one piece on narrow screens instead of breaking mid-phrase. */
-    .results-note {
-      display: inline-block;
-      font-size: 1rem;
-      font-weight: 400;
-      color: var(--text-muted);
-    }
-
     .results {
       list-style: none;
       margin: 0;
@@ -367,7 +394,7 @@
       <div class="fall" id="fall">
         <button type="button" class="chip" id="fall-chip" aria-expanded="false" aria-controls="fall-stepper">
           <span aria-hidden="true">🌙</span>
-          <span><span class="chip-value" id="chip-value">15 min</span> to fall asleep</span>
+          <span class="chip-label"><span class="chip-value" id="chip-value">15 min</span> to fall asleep</span>
           <svg class="chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>
         </button>
 
@@ -389,7 +416,7 @@
       <p class="now-time" id="now-time">--:--</p>
     </section>
 
-    <h2 class="results-title" id="results-title"><span id="results-main">Go to bed at</span> <span class="results-note">· includes <span id="results-fall">15</span> min to fall asleep</span></h2>
+    <h2 class="results-title" id="results-title">Go to bed at</h2>
     <ul class="results" id="results" aria-labelledby="results-title"></ul>
 
     <footer>
@@ -420,8 +447,7 @@
       var fallStatus = document.getElementById('fall-status');
       var fallMinus = document.getElementById('fall-minus');
       var fallPlus = document.getElementById('fall-plus');
-      var resultsMain = document.getElementById('results-main');
-      var resultsFall = document.getElementById('results-fall');
+      var resultsTitle = document.getElementById('results-title');
       var resultsEl = document.getElementById('results');
 
       var mode = 'wake';
@@ -459,7 +485,6 @@
         chipValue.textContent = fallMinutes + ' min';
         fallNumber.textContent = fallMinutes;
         fallCenter.setAttribute('aria-label', fallMinutes + ' min to fall asleep, tap to confirm');
-        resultsFall.textContent = fallMinutes;
         fallMinus.disabled = fallMinutes <= MIN_FALL;
         fallPlus.disabled = fallMinutes >= MAX_FALL;
       }
@@ -501,7 +526,7 @@
         var cycles;
 
         if (mode === 'wake') {
-          resultsMain.textContent = 'Go to bed at';
+          resultsTitle.textContent = 'Go to bed at';
           var parts = (wakeInput.value || '').split(':');
           if (parts.length !== 2) {
             var empty = document.createElement('li');
@@ -518,7 +543,7 @@
             resultsEl.appendChild(resultItem(bedtime, cycles));
           }
         } else {
-          resultsMain.textContent = 'Wake up at';
+          resultsTitle.textContent = 'Wake up at';
           var now = new Date();
           now.setSeconds(0, 0);
           nowTimeEl.textContent = formatTime(now);
