@@ -397,6 +397,32 @@
       color: var(--text-muted);
     }
 
+    /* ---------- Tap-to-set-alarm (Apple devices only) ---------- */
+    /* 48px tall tap target; the negative margin keeps the card's height unchanged. */
+    .alarm-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 48px;
+      margin: -6px 0;
+      color: inherit;
+      text-decoration: none;
+      border-radius: 8px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .alarm-link:hover .alarm-label {
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 4px;
+    }
+
+    .alarm-help {
+      margin: 1rem 0 0;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+
     footer {
       margin-top: 2rem;
       color: var(--text-muted);
@@ -461,6 +487,11 @@
     <h2 class="results-title" id="results-title">Go to bed at</h2>
     <ul class="results" id="results" aria-labelledby="results-title"></ul>
 
+    <!-- Shown on Apple devices only (see IS_APPLE in the script). -->
+    <p class="alarm-help" id="alarm-help" hidden>
+      Tap a time to set an alarm (needs the 'Set Sleep Alarm' Shortcut).
+    </p>
+
     <footer>
       <p>One sleep cycle is about 90 minutes. Most adults need 5–6 cycles (7½–9 hours).</p>
       <p>Cycle length varies from person to person. This is a guide, not medical advice.</p>
@@ -473,6 +504,11 @@
       var MIN_FALL = 0;
       var MAX_FALL = 120;
       var RECOMMENDED = { 5: true, 6: true };
+
+      // Tap-to-set-alarm via the iOS/macOS Shortcut named exactly "Set Sleep Alarm".
+      var SHORTCUT_NAME = 'Set Sleep Alarm';
+      // iPhone, iPad (iPadOS also reports "Macintosh") and Mac: the devices with Shortcuts.
+      var IS_APPLE = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent || '');
 
       var tabWake = document.getElementById('tab-wake');
       var tabNow = document.getElementById('tab-now');
@@ -547,6 +583,40 @@
         return 'in ' + (h ? h + 'h' + (mins ? ' ' + mins : '') : mins);
       }
 
+      // Always English 12-hour ("6:15 AM"), whatever the device's clock setting,
+      // because that's the format the Shortcut's "Get Dates from Input" was tested with.
+      function alarmText(date) {
+        var h = date.getHours();
+        var m = date.getMinutes();
+        return (h % 12 || 12) + ':' + (m < 10 ? '0' : '') + m + ' ' + (h < 12 ? 'AM' : 'PM');
+      }
+
+      // shortcuts://run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM
+      function alarmUrl(date) {
+        return 'shortcuts://run-shortcut?name=' + encodeURIComponent(SHORTCUT_NAME) +
+          '&input=text&text=' + encodeURIComponent(alarmText(date)).replace(/%3A/g, ':');
+      }
+
+      // The time on a result card: a tappable alarm link on Apple devices, plain text elsewhere.
+      function timeElement(date) {
+        if (!IS_APPLE) {
+          var plain = document.createElement('div');
+          plain.className = 'result-time';
+          plain.textContent = formatTime(date);
+          return plain;
+        }
+        var link = document.createElement('a');
+        link.className = 'result-time alarm-link';
+        link.href = alarmUrl(date);
+        link.setAttribute('aria-label',
+          (mode === 'wake' ? 'Set bedtime reminder for ' : 'Set alarm for ') + formatTime(date));
+        var label = document.createElement('span');
+        label.className = 'alarm-label';
+        label.textContent = formatTime(date);
+        link.appendChild(label);
+        return link;
+      }
+
       function resultItem(date, cycles, countdownMinutes) {
         var isNext = countdownMinutes !== undefined;
         var isRecommended = !!RECOMMENDED[cycles];
@@ -554,9 +624,7 @@
         li.className = 'result' + (isRecommended ? ' recommended' : '') +
           (isNext ? ' next' + (isRecommended ? ' has-pill' : '') : '');
 
-        var time = document.createElement('div');
-        time.className = 'result-time';
-        time.textContent = formatTime(date);
+        var time = timeElement(date);
         var meta = document.createElement('div');
         meta.className = 'result-meta';
         meta.textContent = formatDuration(cycles * CYCLE_MIN) + ' of sleep · ' + cycles + (cycles === 1 ? ' cycle' : ' cycles');
@@ -607,6 +675,8 @@
       }
 
       function renderResults() {
+        // The list is rebuilt every 15 seconds; keep keyboard focus on the same time link.
+        var focusIndex = Array.prototype.indexOf.call(resultsEl.querySelectorAll('a'), document.activeElement);
         resultsEl.innerHTML = '';
         var cycles;
 
@@ -649,6 +719,11 @@
             var wakeAt = addMinutes(now, fallMinutes + cycles * CYCLE_MIN);
             resultsEl.appendChild(resultItem(wakeAt, cycles));
           }
+        }
+
+        if (focusIndex >= 0) {
+          var links = resultsEl.querySelectorAll('a');
+          if (links[focusIndex]) links[focusIndex].focus();
         }
       }
 
@@ -711,6 +786,10 @@
       document.addEventListener('visibilitychange', function () {
         if (!document.hidden) renderResults();
       });
+
+      if (IS_APPLE) {
+        document.getElementById('alarm-help').hidden = false;
+      }
 
       window.addEventListener('resize', fitNextCard);
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitNextCard);

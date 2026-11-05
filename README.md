@@ -11,6 +11,7 @@ A simple, dark-mode web page that helps you time your sleep around 90-minute sle
 - Dark mode only, with a warm accent colour and text that meets WCAG AA contrast.
 - Uses your device's 12- or 24-hour clock setting.
 - Remembers your settings on your device.
+- **Tap a time to set an alarm** (iPhone, iPad and Mac) — uses an Apple Shortcut; see below.
 
 ## How it works
 
@@ -18,6 +19,36 @@ A simple, dark-mode web page that helps you time your sleep around 90-minute sle
 - **Wake-up time** = now + time to fall asleep + (cycles × 90 min)
 
 Cycle length varies from person to person; treat the results as a guide, not medical advice.
+
+## Tap-to-set-alarm (iPhone, iPad and Mac)
+
+On Apple devices, every time in the results is a link. Tapping it runs the **Set Sleep Alarm** Shortcut, which creates an alarm at that time:
+
+- **Wake up at…** tab: sets an alarm at the bedtime, as a reminder to go to bed.
+- **Go to bed now** tab: sets a wake-up alarm.
+
+On other devices (Android, Windows, Linux) the times are shown as plain text, because the Shortcuts app isn't available there.
+
+### How the link works
+
+Tapping a time opens a link like this:
+
+```
+shortcuts://run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM
+```
+
+The time is always sent in English 12-hour format (`6:15 AM`, `9:45 PM`), even if your device uses a 24-hour clock or another language, because that's the format the Shortcut reads reliably.
+
+### Set up the Shortcut (one time)
+
+Build it in the Shortcuts app on your iPhone (or Mac):
+
+1. Tap **+** to create a new Shortcut and name it exactly **Set Sleep Alarm** (the name must match).
+2. Add the action **Get Dates from Input**, using **Shortcut Input**.
+3. Add the action **Create Alarm**, and set its time to the **Dates** from the previous step.
+4. Tap **Done**.
+
+The first time you tap a time, iOS may ask for permission to open Shortcuts and to let the Shortcut create alarms. Allow both.
 
 ## Run it
 
