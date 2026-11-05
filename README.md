@@ -4,8 +4,8 @@ A simple, dark-mode web page that helps you time your sleep around 90-minute sle
 
 ## Features
 
+- **Go to bed now** — get wake-up times for 1–6 sleep cycles from the current time, earliest first. This is the first tab and the page always opens on it.
 - **Wake up at…** — pick the time you want to wake up and get bedtimes from 6 sleep cycles at the top down to 1 cycle at the bottom. The soonest bedtime that hasn't passed yet has a green border and a live countdown (e.g. "in 45 mins").
-- **Go to bed now** — get wake-up times for 1–6 sleep cycles from the current time, earliest first.
 - **Time to fall asleep** — shown as "🌙 15 min to fall asleep" under the time. Tap it to open − / + buttons that change it 1 minute at a time (default 15 minutes, range 0–120); tap the value to close it again.
 - Each result shows the total sleep and number of cycles, e.g. `7h 30m of sleep · 5 cycles`. 5 and 6 cycles are marked **Recommended**.
 - Dark mode only, with a warm accent colour and text that meets WCAG AA contrast.
@@ -24,8 +24,8 @@ Cycle length varies from person to person; treat the results as a guide, not med
 
 On Apple devices, every time in the results is a link. Tapping it runs the **Set Sleep Alarm** Shortcut, which creates an alarm at that time:
 
-- **Wake up at…** tab: sets an alarm at the bedtime, as a reminder to go to bed.
 - **Go to bed now** tab: sets a wake-up alarm.
+- **Wake up at…** tab: sets an alarm at the bedtime, as a reminder to go to bed.
 
 On other devices (Android, Windows, Linux) the times are shown as plain text, because the Shortcuts app isn't available there.
 
@@ -51,6 +51,10 @@ Build it in the Shortcuts app on your iPhone (or Mac):
 4. Tap **Done**.
 
 The first time you tap a time, iOS may ask for permission to open Shortcuts and to let the Shortcut create alarms. Allow both.
+
+## Add it to your Home Screen
+
+In Safari on iPhone or iPad, open the page, tap **Share → Add to Home Screen**. The icon is `apple-touch-icon.png` (a 🌙 on the app's dark background). iOS saves the icon when you add the page, so after the icon changes, remove the old Home Screen icon and add it again.
 
 ## Run it
 

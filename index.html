@@ -7,6 +7,9 @@
   <meta name="theme-color" content="#0e1116">
   <meta name="description" content="Find the best times to go to bed or wake up, based on 90-minute sleep cycles.">
   <title>Sleep Calculator</title>
+  <!-- Home-screen icon on iPhone/iPad (and the browser-tab icon): 🌙 on the app's dark background. -->
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="apple-touch-icon.png">
   <style>
     /* Dark-only theme. Off-black background and off-white text reduce glare;
        a warm amber accent avoids bright blue light at night.
@@ -72,7 +75,7 @@
     /* ---------- Tabs ---------- */
     .tabs {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 0.25rem;
       padding: 0.25rem;
       background: var(--surface);
@@ -93,6 +96,16 @@
       min-height: 48px;
       padding: 0.5rem;
       cursor: pointer;
+    }
+
+    .tab-emoji { white-space: nowrap; }
+
+    /* Smallest phones: keep each tab label and its emoji on one line. */
+    @media (max-width: 360px) {
+      .tab {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.9375rem;
+      }
     }
 
     .tab[aria-selected="true"] {
@@ -450,8 +463,8 @@
     <p class="subtitle">Wake up between sleep cycles, not in the middle of one.</p>
 
     <div class="tabs" role="tablist" aria-label="Calculator mode">
-      <button class="tab" role="tab" id="tab-wake" aria-controls="panel-wake" aria-selected="true">Wake up at…</button>
-      <button class="tab" role="tab" id="tab-now" aria-controls="panel-now" aria-selected="false" tabindex="-1">Go to bed now</button>
+      <button class="tab" role="tab" id="tab-now" aria-controls="panel-now" aria-selected="true">Go to bed now <span class="tab-emoji" aria-hidden="true">💤</span></button>
+      <button class="tab" role="tab" id="tab-wake" aria-controls="panel-wake" aria-selected="false" tabindex="-1">Wake up at… <span class="tab-emoji" aria-hidden="true">☕</span></button>
     </div>
 
     <section class="card" role="tabpanel" id="panel-wake" aria-labelledby="tab-wake">
@@ -528,15 +541,13 @@
       var resultsTitle = document.getElementById('results-title');
       var resultsEl = document.getElementById('results');
 
-      var mode = 'wake';
+      var mode = 'now'; // always opens on "Go to bed now"
       var fallMinutes = 15;
 
       // Remember the viewer's preferences on this device (optional convenience).
       try {
         var savedFall = parseInt(localStorage.getItem('sc-fall'), 10);
         if (!isNaN(savedFall) && savedFall >= MIN_FALL && savedFall <= MAX_FALL) fallMinutes = savedFall;
-        var savedMode = localStorage.getItem('sc-mode');
-        if (savedMode === 'wake' || savedMode === 'now') mode = savedMode;
         var savedWake = localStorage.getItem('sc-wake');
         if (savedWake && /^\d{2}:\d{2}$/.test(savedWake)) wakeInput.value = savedWake;
       } catch (e) { /* storage unavailable: use defaults */ }
@@ -741,7 +752,6 @@
         panelNow.hidden = isWake;
         (isWake ? panelWake : panelNow).appendChild(fallWrap);
         if (moveFocus) (isWake ? tabWake : tabNow).focus();
-        save('sc-mode', mode);
         renderResults();
       }
 
@@ -765,7 +775,7 @@
         tab.addEventListener('keydown', function (e) {
           if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End') {
             e.preventDefault();
-            var target = (e.key === 'Home') ? 'wake' : (e.key === 'End') ? 'now' : (mode === 'wake' ? 'now' : 'wake');
+            var target = (e.key === 'Home') ? 'now' : (e.key === 'End') ? 'wake' : (mode === 'wake' ? 'now' : 'wake');
             setMode(target, true);
           }
         });
