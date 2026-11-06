@@ -163,12 +163,44 @@
       cursor: pointer;
     }
 
-    .now-time {
-      text-align: center;
-      font-size: 2rem;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      margin: 0;
+    /* "Go to bed at…": label on the left, "Reset to now" on the right (only after choosing a time). */
+    .field-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin: 0 0 0.5rem;
+    }
+
+    .field-row .field-label { margin: 0; }
+
+    /* Text-style button with a 48px tap target; negative margin keeps the row height unchanged. */
+    .text-btn {
+      appearance: none;
+      flex-shrink: 0;
+      min-height: 48px;
+      margin: -12px -0.25rem;
+      padding: 0 0.25rem;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--accent);
+      font: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    /* Smallest phones: "Reset" alone, so the label stays on one line. */
+    @media (max-width: 360px) {
+      .reset-extra { display: none; }
+    }
+
+    .text-btn:hover {
+      color: var(--accent-hover);
+      text-decoration: underline;
+      text-underline-offset: 3px;
     }
 
     /* ---------- Time to fall asleep ---------- */
@@ -463,7 +495,7 @@
     <p class="subtitle">Wake up between sleep cycles, not in the middle of one.</p>
 
     <div class="tabs" role="tablist" aria-label="Calculator mode">
-      <button class="tab" role="tab" id="tab-now" aria-controls="panel-now" aria-selected="true">Go to bed now <span class="tab-emoji" aria-hidden="true">💤</span></button>
+      <button class="tab" role="tab" id="tab-now" aria-controls="panel-now" aria-selected="true">Go to bed at… <span class="tab-emoji" aria-hidden="true">💤</span></button>
       <button class="tab" role="tab" id="tab-wake" aria-controls="panel-wake" aria-selected="false" tabindex="-1">Wake up at… <span class="tab-emoji" aria-hidden="true">☕</span></button>
     </div>
 
@@ -493,8 +525,12 @@
     </section>
 
     <section class="card" role="tabpanel" id="panel-now" aria-labelledby="tab-now" hidden>
-      <p class="field-label">If you go to bed now</p>
-      <p class="now-time" id="now-time">--:--</p>
+      <div class="field-row">
+        <label class="field-label" for="bed-time" id="bed-label">If you go to bed now</label>
+        <button type="button" class="text-btn" id="bed-reset" aria-label="Reset to now" hidden>Reset<span class="reset-extra"> to now</span></button>
+      </div>
+      <!-- Follows the current time until the user picks a bedtime. -->
+      <input type="time" id="bed-time">
     </section>
 
     <h2 class="results-title" id="results-title">Go to bed at</h2>
@@ -528,7 +564,9 @@
       var panelWake = document.getElementById('panel-wake');
       var panelNow = document.getElementById('panel-now');
       var wakeInput = document.getElementById('wake-time');
-      var nowTimeEl = document.getElementById('now-time');
+      var bedInput = document.getElementById('bed-time');
+      var bedLabel = document.getElementById('bed-label');
+      var bedReset = document.getElementById('bed-reset');
       var fallWrap = document.getElementById('fall');
       var fallChip = document.getElementById('fall-chip');
       var chipValue = document.getElementById('chip-value');
@@ -541,8 +579,9 @@
       var resultsTitle = document.getElementById('results-title');
       var resultsEl = document.getElementById('results');
 
-      var mode = 'now'; // always opens on "Go to bed now"
+      var mode = 'now'; // always opens on "Go to bed at…", following the current time
       var fallMinutes = 15;
+      var bedChosen = false; // false: follow the current time; true: use the bedtime the user picked
 
       // Remember the viewer's preferences on this device (optional convenience).
       try {
@@ -568,6 +607,21 @@
 
       function addMinutes(date, minutes) {
         return new Date(date.getTime() + minutes * 60000);
+      }
+
+      // "HH:MM" (24-hour), the value format of <input type="time">.
+      function inputValue(date) {
+        return (date.getHours() < 10 ? '0' : '') + date.getHours() + ':' +
+          (date.getMinutes() < 10 ? '0' : '') + date.getMinutes();
+      }
+
+      // The next time the clock shows h:m, at or after fromMs (today, otherwise tomorrow).
+      // Each candidate is built fresh from the calendar date so clock changes can't shift it.
+      function nextOccurrence(h, m, fromMs) {
+        var from = new Date(fromMs);
+        var c = new Date(from.getFullYear(), from.getMonth(), from.getDate(), h, m);
+        if (c.getTime() < fromMs) c = new Date(from.getFullYear(), from.getMonth(), from.getDate() + 1, h, m);
+        return c;
       }
 
       function renderFall() {
@@ -725,12 +779,28 @@
           fitNextCard();
         } else {
           resultsTitle.textContent = 'Wake up at';
-          var now = new Date();
-          now.setSeconds(0, 0);
-          nowTimeEl.textContent = formatTime(now);
+          bedLabel.textContent = bedChosen ? 'If you go to bed at' : 'If you go to bed now';
+          bedReset.hidden = !bedChosen;
+          // Start of the current minute (whole-minute arithmetic, so clock changes can't shift it).
+          var nowMinute = new Date(Math.floor(Date.now() / 60000) * 60000);
+          var bedtime = nowMinute;
+          if (!bedChosen) {
+            // Keep the box on the current time, but never change it while it's being edited.
+            if (document.activeElement !== bedInput) bedInput.value = inputValue(nowMinute);
+          } else {
+            var bedParts = (bedInput.value || '').split(':');
+            if (bedParts.length !== 2) {
+              var noBed = document.createElement('li');
+              noBed.className = 'empty';
+              noBed.textContent = 'Choose a bedtime to see wake-up times.';
+              resultsEl.appendChild(noBed);
+              return;
+            }
+            bedtime = nextOccurrence(parseInt(bedParts[0], 10), parseInt(bedParts[1], 10), nowMinute.getTime());
+          }
           // Same order as "Wake up at…": 6 cycles at the top down to 1 cycle at the bottom.
           for (cycles = 6; cycles >= 1; cycles--) {
-            var wakeAt = addMinutes(now, fallMinutes + cycles * CYCLE_MIN);
+            var wakeAt = addMinutes(bedtime, fallMinutes + cycles * CYCLE_MIN);
             resultsEl.appendChild(resultItem(wakeAt, cycles));
           }
         }
@@ -789,12 +859,26 @@
         if (e.key === 'Escape') { e.preventDefault(); setExpanded(false); }
       });
 
+      // Picking a bedtime switches from "now" to that time; "Reset to now" switches back.
+      bedInput.addEventListener('input', function () {
+        bedChosen = true;
+        renderResults();
+      });
+      bedInput.addEventListener('blur', function () {
+        if (!bedChosen) renderResults(); // catch up if the minute changed while the picker was open
+      });
+      bedReset.addEventListener('click', function () {
+        bedChosen = false;
+        renderResults();
+        bedInput.focus(); // the button hides itself, so keep focus nearby
+      });
+
       wakeInput.addEventListener('input', function () {
         if (wakeInput.value) save('sc-wake', wakeInput.value);
         renderResults();
       });
 
-      // Keep "Go to bed now" and the "Wake up at…" countdown current.
+      // Keep "Go to bed at…" (when following the current time) and the "Wake up at…" countdown current.
       setInterval(renderResults, 15000);
       document.addEventListener('visibilitychange', function () {
         if (!document.hidden) renderResults();
