@@ -7,7 +7,7 @@ A simple, dark-mode web page that helps you time your sleep around 90-minute sle
 - **Go to bed at…** — get wake-up times from the current time, or tap the time to choose a different bedtime (**↺ Now** goes back to the current time); from 6 sleep cycles at the top down to 1 cycle at the bottom (the same order as **Wake up at…**). This is the first tab and the page always opens on it.
 - **Wake up at…** — pick the time you want to wake up (8:00 AM to start; the app remembers the last time you set) and get bedtimes from 6 sleep cycles at the top down to 1 cycle at the bottom. The soonest bedtime that hasn't passed yet has a green border and a live countdown (e.g. "in 45 mins").
 - **Time to fall asleep** — shown as "🌙 15 min to fall asleep" under the time. Tap it to open − / + buttons that change it 1 minute at a time (default 15 minutes, range 0–120); tap the value to close it again.
-- Each result shows the total sleep and number of cycles, e.g. `7h 30m of sleep · 5 cycles`. 5 and 6 cycles are marked **Recommended**.
+- Each result shows the total sleep and number of cycles, e.g. `7h 30m of sleep · 5 cycles`. 5 and 6 cycles are marked **Recommended** (green pill for 6 cycles, orange for 5).
 - Dark mode only, with a warm accent colour and text that meets WCAG AA contrast.
 - The title uses [Fraunces](https://github.com/undercasetype/Fraunces) in its soft style, in pale moon yellow with a few stars. The font file (`fonts/fraunces-heading.woff2`, 11 KB) is stored in this repo under the SIL Open Font License (`fonts/OFL.txt`).
 - Uses your device's 12- or 24-hour clock setting.
@@ -58,7 +58,7 @@ The first time you tap a time, iOS may ask for permission to open Shortcuts and 
 
 ## Add it to your Home Screen
 
-In Safari on iPhone or iPad, open the page, tap **Share → Add to Home Screen**. The icon is `apple-touch-icon.png` (a 🌙 on the app's dark background). iOS saves the icon when you add the page, so after the icon changes, remove the old Home Screen icon and add it again.
+In Safari on iPhone or iPad, open the page, tap **Share → Add to Home Screen**. It opens full screen like an app, with no Safari bar (set up by `manifest.webmanifest` and the Apple web-app tags in `index.html`). The icon is `apple-touch-icon.png` (a 🌙 on the app's dark background; `icon-512.png` for other devices). iOS saves these settings when you add the page, so after they change, remove the old Home Screen icon and add it again.
 
 ## Run it
 

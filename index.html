@@ -2,13 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0e1116">
   <meta name="description" content="Find the best times to go to bed or wake up, based on 90-minute sleep cycles.">
   <title>Sleep Calculator</title>
   <!-- Home-screen icon on iPhone/iPad (and the browser-tab icon): 🌙 on the app's dark background. -->
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <!-- Opens full screen from the Home Screen (no Safari bar); the page draws behind the status bar. -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="icon" type="image/png" href="apple-touch-icon.png">
   <style>
     /* Dark-only theme. Off-black background and off-white text reduce glare;
@@ -61,7 +66,11 @@
     main {
       max-width: 30rem;
       margin: 0 auto;
-      padding: 2.75rem 1rem 3rem; /* extra top space for the stars above the title */
+      /* Extra top space for the stars; full screen on iPhone, also clear the clock/battery area. */
+      padding: max(2.75rem, calc(env(safe-area-inset-top, 0px) + 1rem))
+               max(1rem, env(safe-area-inset-right, 0px))
+               max(3rem, env(safe-area-inset-bottom, 0px))
+               max(1rem, env(safe-area-inset-left, 0px));
     }
 
     /* Storybook title: soft serif in pale moon yellow with a gentle glow, and a few stars above it. */
@@ -416,35 +425,26 @@
       display: grid;
       grid-template-columns: minmax(0, 1fr);
       gap: 0.5rem;
+      container-type: inline-size;   /* card text scales with the list's width */
     }
 
+    /* Fluid card text: everything inside a card is sized in em and scales with the list's width,
+       so the widest card ("7h 30m of sleep · 5 cycles" + pill + countdown) always fits on one line.
+       Full size (16px base) from about a 410px-wide phone; ~15px on a 390px phone; 12px at 320px. */
     .result {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 0.75rem 1rem;
-    }
-
-    .result.recommended {
-      border-color: var(--accent);
-    }
-
-    /* Only the top recommended wake-up time gets the orange border; the second keeps just its pill. */
-    .result.recommended.quiet {
-      border-color: var(--border);
-    }
-
-    /* Soonest bedtime that hasn't passed yet ("Wake up at…" tab only). */
-    .result.next {
-      border-color: var(--confirm);
-      box-shadow: inset 0 0 0 1px var(--confirm); /* 2px total, stands out from amber */
+      font-size: 16px;   /* fallback for browsers without container units */
+      font-size: clamp(12px, calc(4.66cqi - 1.6px), 16px);
     }
 
     .result-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.75rem;
+      gap: 0.75em;
     }
 
     /* Highlighted card ("Wake up at…" tab): the soonest bedtime still ahead.
@@ -456,7 +456,7 @@
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       align-items: center;
-      column-gap: 0.75rem;
+      column-gap: 0.75em;
       row-gap: 0.25rem;
     }
 
@@ -470,21 +470,25 @@
     .result.next .result-time { grid-area: time; justify-self: start; }
     .result.next .result-meta { grid-area: meta; justify-self: start; white-space: nowrap; }
     .result.next .badge { grid-area: pill; justify-self: end; }
+    /* With a pill: pill and countdown share a column and are centred on each other
+       (the wider of the two sits flush with the card's right edge). */
+    .result.next.has-pill:not(.compact) .badge,
+    .result.next.has-pill:not(.compact) .countdown { justify-self: center; }
     .result.next.compact .badge { justify-self: start; }
 
-    /* Green, bold, slightly smaller than the time, flush with the card's right padding. */
+    /* Green, bold, 16px at full size, flush with the card's right padding. */
     .countdown {
       grid-area: countdown;
       justify-self: end;
       color: var(--confirm);
-      font-size: 1.375rem;
+      font-size: 1em;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }
 
     .result-time {
-      font-size: 1.5rem;
+      font-size: 1.5em;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
@@ -492,17 +496,24 @@
 
     .result-meta {
       color: var(--text-muted);
-      font-size: 1rem;
+      font-size: 1em;
+      white-space: nowrap;
+    }
+
+    /* The top recommended time's pill is green; the second stays orange. Cards have no coloured borders. */
+    .badge.badge-top {
+      color: var(--confirm);
+      border-color: var(--confirm);
     }
 
     .badge {
       flex-shrink: 0;
-      font-size: 0.875rem;
+      font-size: 0.875em;
       font-weight: 700;
       color: var(--accent);
       border: 1px solid var(--accent);
       border-radius: 999px;
-      padding: 0.125rem 0.625rem;
+      padding: 0.125em 0.625em;
     }
 
     .empty {
@@ -910,7 +921,6 @@
         var isRecommended = !!RECOMMENDED[cycles];
         var li = document.createElement('li');
         li.className = 'result' + (isRecommended ? ' recommended' : '') +
-          (isRecommended && mode === 'now' && cycles === 5 ? ' quiet' : '') +
           (isNext ? ' next' + (isRecommended ? ' has-pill' : '') : '');
 
         var time = timeElement(date, cycles);
@@ -920,7 +930,7 @@
         var badge = null;
         if (isRecommended) {
           badge = document.createElement('span');
-          badge.className = 'badge';
+          badge.className = 'badge' + (cycles === 6 ? ' badge-top' : '');   // top recommended: green
           badge.textContent = 'Recommended';
         }
 
