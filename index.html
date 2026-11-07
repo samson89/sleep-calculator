@@ -834,23 +834,68 @@
           '&x-success=' + back + '&x-cancel=' + back + '&x-error=' + back;
       }
 
+      // Staggered alarms: tapping the same card again within 30 seconds of the first tap sets the
+      // next alarm 5 minutes later (6:15, 6:20, 6:25 ...). 30 seconds after the first tap it resets to
+      // the card's own time. Returning from Shortcuts reloads the page, so the taps are kept on the
+      // device for those 30 seconds only.
+      var STAGGER_MIN = 5;
+      var STAGGER_WINDOW_MS = 30000;
+      var TAPS_KEY = 'sc-alarm-taps';
+      var taps = {};
+      try { taps = JSON.parse(localStorage.getItem(TAPS_KEY)) || {}; } catch (e) { taps = {}; }
+      var resetTimer = null;
+      function tapRecord(cycles) {
+        var t = taps[mode + ' ' + cycles];
+        return t && Date.now() - t.firstAt < STAGGER_WINDOW_MS ? t : null;
+      }
+      // The alarm time the next tap on this card will set.
+      function nextAlarm(date, cycles) {
+        var t = tapRecord(cycles);
+        return t ? new Date(t.base + t.count * STAGGER_MIN * 60000) : date;
+      }
+      // Redraw when the 30 seconds are up, so the card goes back to its own time.
+      function scheduleReset() {
+        var soonest = Infinity;
+        Object.keys(taps).forEach(function (k) {
+          var left = taps[k].firstAt + STAGGER_WINDOW_MS - Date.now();
+          if (left > 0) soonest = Math.min(soonest, left);
+        });
+        clearTimeout(resetTimer);
+        if (soonest < Infinity) resetTimer = setTimeout(renderResults, soonest + 50);
+      }
+      function recordTap(date, cycles) {
+        var now = Date.now();
+        Object.keys(taps).forEach(function (k) { if (!taps[k] || now - taps[k].firstAt >= STAGGER_WINDOW_MS) delete taps[k]; });
+        var t = tapRecord(cycles) || { base: date.getTime(), count: 0, firstAt: now };
+        t.count += 1;
+        taps[mode + ' ' + cycles] = t;
+        save(TAPS_KEY, JSON.stringify(taps));
+        scheduleReset();
+      }
+      scheduleReset();   // after returning from Shortcuts, still reset on time
+
       // The time on a result card: a tappable alarm link on Apple devices, plain text elsewhere.
-      function timeElement(date) {
+      function timeElement(date, cycles) {
         if (!IS_APPLE) {
           var plain = document.createElement('div');
           plain.className = 'result-time';
           plain.textContent = formatTime(date);
           return plain;
         }
+        var alarmAt = nextAlarm(date, cycles);   // this tap's alarm time
         var link = document.createElement('a');
         link.className = 'result-time alarm-link';
-        link.href = alarmUrl(date);
+        link.href = alarmUrl(alarmAt);
         link.setAttribute('aria-label',
           (mode === 'wake' ? 'Set bedtime reminder for ' : 'Set alarm for ') + formatTime(date));
         var label = document.createElement('span');
         label.className = 'alarm-label';
         label.textContent = formatTime(date);
         link.appendChild(label);
+        link.addEventListener('click', function () {
+          recordTap(date, cycles);
+          setTimeout(renderResults, 300);   // show the next (+5 min) time if the page is still here
+        });
         return link;
       }
 
@@ -861,7 +906,7 @@
         li.className = 'result' + (isRecommended ? ' recommended' : '') +
           (isNext ? ' next' + (isRecommended ? ' has-pill' : '') : '');
 
-        var time = timeElement(date);
+        var time = timeElement(date, cycles);
         var meta = document.createElement('div');
         meta.className = 'result-meta';
         meta.textContent = formatDuration(cycles * CYCLE_MIN) + ' of sleep · ' + cycles + (cycles === 1 ? ' cycle' : ' cycles');

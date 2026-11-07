@@ -29,6 +29,8 @@ On Apple devices, every time in the results is a link. Tapping it runs the **Set
 - **Go to bed at…** tab: sets a wake-up alarm.
 - **Wake up at…** tab: sets an alarm at the bedtime, as a reminder to go to bed.
 
+Tapping the same time again within 30 seconds sets another alarm 5 minutes later (7:45, then 7:50, then 7:55 …), so you can stack staggered alarms. 30 seconds after the first tap it resets to the card's own time.
+
 On other devices (Android, Windows, Linux) the times are shown as plain text, because the Shortcuts app isn't available there.
 
 ### How the link works
