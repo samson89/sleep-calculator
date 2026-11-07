@@ -29,7 +29,17 @@
       --accent-hover: #f5c78f; /* lighter amber for hovered amber buttons */
       --confirm: #5cbf85;     /* soft green checkmark (>= 6:1 on controls) */
       --focus: #f0b46a;
+      --moon: #f7e7a6;        /* pale moon yellow for the title */
       --radius: 14px;
+    }
+
+    /* Title font: Fraunces (SIL Open Font License, see fonts/OFL.txt), fixed to its soft
+       "storybook" style and trimmed to basic Latin characters (11 KB, stored in this repo). */
+    @font-face {
+      font-family: "Fraunces Heading";
+      src: url("fonts/fraunces-heading.woff2") format("woff2");
+      font-weight: 600;
+      font-display: swap;
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -54,11 +64,26 @@
       padding: 2rem 1rem 3rem;
     }
 
+    /* Storybook title: soft serif in pale moon yellow with a gentle glow, and a few stars above it. */
+    .masthead { position: relative; }
+
     h1 {
-      font-size: 1.75rem;
-      line-height: 1.2;
+      font-family: "Fraunces Heading", Georgia, "Times New Roman", serif;
+      font-size: 2.1rem;
+      line-height: 1.15;
       margin: 0 0 0.25rem;
-      font-weight: 700;
+      font-weight: 600;
+      color: var(--moon);
+      text-shadow: 0 0 16px rgba(247, 231, 166, 0.3);
+    }
+
+    .stars i {
+      position: absolute;
+      font-style: normal;
+      line-height: 1;
+      color: var(--moon);
+      opacity: 0.75;
+      pointer-events: none;
     }
 
     /* Title links to the app's home address, like a site logo; looks like plain text. */
@@ -514,7 +539,10 @@
 </head>
 <body>
   <main>
-    <h1><a class="home-link" href="./" aria-current="page">Sleep Calculator</a></h1>
+    <header class="masthead">
+      <span class="stars" aria-hidden="true"><i style="left:18%;top:-24px;font-size:8px">✦</i><i style="left:46%;top:-16px;font-size:12px">✦</i><i style="left:63%;top:-27px;font-size:7px">•</i><i style="left:80%;top:-20px;font-size:10px">✦</i><i style="left:94%;top:-8px;font-size:7px">✦</i></span>
+      <h1><a class="home-link" href="./" aria-current="page">Sleep Calculator</a></h1>
+    </header>
     <p class="subtitle">Wake up between sleep cycles, not in the middle of one.</p>
 
     <div class="tabs" role="tablist" aria-label="Calculator mode">
