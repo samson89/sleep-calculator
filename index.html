@@ -116,7 +116,7 @@
     .subtitle {
       margin: 0 0 1.5rem;
       color: var(--text-muted);
-      font-size: 1rem;
+      font-size: 0.9375rem;
     }
 
     /* The card only gets focus from "↺ Now"; no ring needed for that. */
@@ -429,6 +429,11 @@
       border-color: var(--accent);
     }
 
+    /* Only the top recommended wake-up time gets the orange border; the second keeps just its pill. */
+    .result.recommended.quiet {
+      border-color: var(--border);
+    }
+
     /* Soonest bedtime that hasn't passed yet ("Wake up at…" tab only). */
     .result.next {
       border-color: var(--confirm);
@@ -557,7 +562,7 @@
       <span class="stars" aria-hidden="true"></span>
       <h1><a class="home-link" href="./" aria-current="page">Sleep Calculator</a></h1>
     </header>
-    <p class="subtitle">Wake up feeling more refreshed and alert at the end of a full sleep cycle, not in the middle of one. Based off latest sleep science.</p>
+    <p class="subtitle">Wake up feeling more refreshed and alert at the end of a full sleep cycle, not in the middle of one.</p>
 
     <div class="tabs" role="tablist" aria-label="Calculator mode">
       <button class="tab" role="tab" id="tab-now" aria-controls="panel-now" aria-selected="true">Go to bed at… <span class="tab-emoji" aria-hidden="true">💤</span></button>
@@ -607,6 +612,7 @@
     </p>
 
     <footer>
+      <p>Based off latest sleep science.</p>
       <p>One sleep cycle is about 90 minutes. Most adults need 5–6 cycles (7½–9 hours).</p>
       <p>Cycle length varies from person to person. This is a guide, not medical advice.</p>
     </footer>
@@ -904,6 +910,7 @@
         var isRecommended = !!RECOMMENDED[cycles];
         var li = document.createElement('li');
         li.className = 'result' + (isRecommended ? ' recommended' : '') +
+          (isRecommended && mode === 'now' && cycles === 5 ? ' quiet' : '') +
           (isNext ? ' next' + (isRecommended ? ' has-pill' : '') : '');
 
         var time = timeElement(date, cycles);
