@@ -61,7 +61,7 @@
     main {
       max-width: 30rem;
       margin: 0 auto;
-      padding: 2rem 1rem 3rem;
+      padding: 2.75rem 1rem 3rem; /* extra top space for the stars above the title */
     }
 
     /* Storybook title: soft serif in pale moon yellow with a gentle glow, and a few stars above it. */
@@ -77,13 +77,27 @@
       text-shadow: 0 0 16px rgba(247, 231, 166, 0.3);
     }
 
+    /* Decorative stars above, behind and beside the title: small, faint, never on top of the text. */
+    .masthead h1 { position: relative; z-index: 1; }
+
     .stars i {
       position: absolute;
+      z-index: 0;
       font-style: normal;
       line-height: 1;
       color: var(--moon);
-      opacity: 0.75;
       pointer-events: none;
+    }
+
+    /* A few stars gently fade and return; they never get brighter than their resting level. */
+    .stars i.twinkle { animation: twinkle 4s ease-in-out infinite; }
+
+    @keyframes twinkle {
+      50% { opacity: 0.1; transform: scale(0.8); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .stars i.twinkle { animation: none; }
     }
 
     /* Title links to the app's home address, like a site logo; looks like plain text. */
@@ -540,10 +554,10 @@
 <body>
   <main>
     <header class="masthead">
-      <span class="stars" aria-hidden="true"><i style="left:18%;top:-24px;font-size:8px">✦</i><i style="left:46%;top:-16px;font-size:12px">✦</i><i style="left:63%;top:-27px;font-size:7px">•</i><i style="left:80%;top:-20px;font-size:10px">✦</i><i style="left:94%;top:-8px;font-size:7px">✦</i></span>
+      <span class="stars" aria-hidden="true"></span>
       <h1><a class="home-link" href="./" aria-current="page">Sleep Calculator</a></h1>
     </header>
-    <p class="subtitle">Wake up between sleep cycles, not in the middle of one.</p>
+    <p class="subtitle">Wake up feeling more refreshed and alert at the end of a full sleep cycle, not in the middle of one. Based off latest sleep science.</p>
 
     <div class="tabs" role="tablist" aria-label="Calculator mode">
       <button class="tab" role="tab" id="tab-now" aria-controls="panel-now" aria-selected="true">Go to bed at… <span class="tab-emoji" aria-hidden="true">💤</span></button>
@@ -599,6 +613,110 @@
   </main>
 
   <script>
+    // Starry sky behind the title: new positions on every page load, and a few stars twinkle.
+    // Stars are never brighter than 85% (the title is 100%); bigger stars are dimmer.
+    (function makeStars() {
+      var layer = document.querySelector('.stars');
+      if (!layer) return;
+      // Even-but-random placement ("best candidate" sampling): each new star goes in the emptiest
+      // of several random spots, so the sky looks natural but never has holes. New pattern every load.
+      var TOP = -40, BOTTOM = 32;                       // px relative to the title's top; clear of the subtitle
+      var W = layer.parentNode.getBoundingClientRect().width || 358, H = BOTTOM - TOP;
+      var COUNT = Math.max(20, Math.min(38, Math.round(W * H / 920)));   // same density at any width
+      var SIZES = [4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 7, 9];   // mostly small; the biggest (9px) is rare
+      var stars = [];
+      for (var n = 0; n < COUNT; n++) {
+        var best = null, bestDist = -1;
+        for (var k = 0; k < 40; k++) {
+          var cx = Math.random() * W * 0.97, cy = TOP + Math.random() * H;
+          var d = Infinity;
+          for (var j = 0; j < stars.length; j++) {
+            var dx = cx - stars[j].x, dy = cy - stars[j].y;
+            d = Math.min(d, dx * dx + dy * dy);
+          }
+          if (d > bestDist) { bestDist = d; best = { x: cx, y: cy }; }
+        }
+        stars.push(best);
+      }
+      stars = stars.map(function (p) {
+        var size = SIZES[Math.floor(Math.random() * SIZES.length)];
+        var max = size >= 9 ? 0.6 : size >= 6 ? 0.75 : 0.85;
+        return {
+          left: p.x / W * 100,
+          top: Math.round(Math.min(p.y, BOTTOM - size)),
+          size: size,
+          opacity: max * (0.65 + Math.random() * 0.35),
+          twinkle: false
+        };
+      });
+      // Pick 4 random stars (not the tiniest) to twinkle, each at its own pace.
+      var candidates = stars.filter(function (s) { return s.size >= 5; });
+      for (var t = 0; t < 4 && candidates.length; t++) {
+        candidates.splice(Math.floor(Math.random() * candidates.length), 1)[0].twinkle = true;
+      }
+      layer.innerHTML = stars.map(function (s) {
+        var style = 'top:' + s.top + 'px';
+        if (s.twinkle) style += ';animation-duration:' + (3 + Math.random() * 3).toFixed(1) + 's;animation-delay:-' + (Math.random() * 6).toFixed(1) + 's';
+        return '<i' + (s.twinkle ? ' class="twinkle"' : '') + ' data-left="' + s.left.toFixed(1) + '" data-size="' + s.size +
+          '" data-opacity="' + s.opacity.toFixed(2) + '" style="' + style + '"></i>';
+      }).join('');
+
+      // Fit the stars around the title (runs on load, once the title font has loaded, and on resize):
+      // - never above an "l" (it would look like an "i"): nudge the star sideways instead of removing it,
+      //   so the sky stays evenly filled;
+      // - behind the title text, only tiny faint dots, so the title stays easy to read.
+      function fitStars() {
+        var text = document.querySelector('.home-link');
+        text = text && text.firstChild;
+        if (!text || text.nodeType !== 3) return;
+        var range = document.createRange();
+        range.selectNodeContents(text);
+        var textBox = range.getBoundingClientRect();
+        var columns = [];
+        for (var i = 0; i < text.data.length; i++) {
+          if (text.data.charAt(i) !== 'l') continue;
+          range.setStart(text, i); range.setEnd(text, i + 1);
+          var lr = range.getBoundingClientRect();
+          columns.push([lr.left - 3, lr.right + 3]);            // a little margin either side
+        }
+        var box = layer.parentNode.getBoundingClientRect();   // the title area the stars are positioned in
+        var overL = function (l, r) { return columns.some(function (c) { return r > c[0] && l < c[1]; }); };
+        layer.querySelectorAll('i').forEach(function (star) {
+          var size = +star.dataset.size, opacity = +star.dataset.opacity;
+          star.style.visibility = '';
+          star.style.left = star.dataset.left + '%';
+          star.style.fontSize = size + 'px';
+          star.style.opacity = opacity;
+          star.textContent = size <= 5 ? '•' : '✦';
+          var sr = star.getBoundingClientRect();
+          // Behind the title text: shrink to a tiny, faint dot.
+          if (sr.bottom > textBox.top + 4 && sr.right > textBox.left && sr.left < textBox.right) {
+            star.style.fontSize = '4px';
+            star.style.opacity = Math.min(opacity, 0.3);
+            star.textContent = '•';
+            sr = star.getBoundingClientRect();
+          }
+          // Over an "l": move just past the nearer side of its column (or hide if there's no room).
+          for (var k = 0; k < columns.length; k++) {
+            var c = columns[k];
+            if (!(sr.right > c[0] && sr.left < c[1])) continue;
+            var w = sr.width;
+            var options = (sr.left + w / 2 < (c[0] + c[1]) / 2) ? [c[0] - w - 1, c[1] + 1] : [c[1] + 1, c[0] - w - 1];
+            var placed = options.some(function (x) {
+              if (x < box.left || x + w > box.right || overL(x, x + w)) return false;
+              star.style.left = (x - box.left) + 'px';
+              return true;
+            });
+            if (!placed) star.style.visibility = 'hidden';
+            break;
+          }
+        });
+      }
+      fitStars();
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitStars);
+      window.addEventListener('resize', fitStars);
+    })();
+
     (function () {
       var CYCLE_MIN = 90;
       var MIN_FALL = 0;
