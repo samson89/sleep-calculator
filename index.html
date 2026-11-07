@@ -61,6 +61,19 @@
       font-weight: 700;
     }
 
+    /* Title links to the app's home address, like a site logo; looks like plain text. */
+    .home-link {
+      color: inherit;
+      text-decoration: none;
+      border-radius: 6px;
+    }
+
+    .home-link:hover {
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 5px;
+    }
+
     .subtitle {
       margin: 0 0 1.5rem;
       color: var(--text-muted);
@@ -501,7 +514,7 @@
 </head>
 <body>
   <main>
-    <h1>Sleep Calculator</h1>
+    <h1><a class="home-link" href="./" aria-current="page">Sleep Calculator</a></h1>
     <p class="subtitle">Wake up between sleep cycles, not in the middle of one.</p>
 
     <div class="tabs" role="tablist" aria-label="Calculator mode">

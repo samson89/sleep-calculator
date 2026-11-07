@@ -11,6 +11,7 @@ A simple, dark-mode web page that helps you time your sleep around 90-minute sle
 - Dark mode only, with a warm accent colour and text that meets WCAG AA contrast.
 - Uses your device's 12- or 24-hour clock setting.
 - Remembers your settings on your device.
+- The **Sleep Calculator** title links back to the app's home page, like a site logo.
 - **Tap a time to set an alarm** (iPhone, iPad and Mac) — uses an Apple Shortcut; see below.
 
 ## How it works
