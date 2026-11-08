@@ -74,7 +74,7 @@ The first time you tap a time, iOS may ask for permission to open Shortcuts and 
 
 ## Add it to your Home Screen
 
-In Safari on iPhone or iPad, open the page, tap **Share → Add to Home Screen**. It opens full screen like an app, with no Safari bar (set up by `manifest.webmanifest` and the Apple web-app tags in `index.html`). The icon is `apple-touch-icon.png` (a 🌙 on the app's dark background; `icon-192.png`, `icon-512.png` and `icon-maskable-512.png` for Android, which installs it full screen too via Chrome's **Add to Home screen / Install app**). iOS saves these settings when you add the page, so after they change, remove the old Home Screen icon and add it again.
+In Safari on iPhone or iPad, open the page and tap **Share → Add to Home Screen**. **Turn off "Open as Web App"** in that screen, so the icon opens the page in Safari: that's what lets Shortcuts bring you back to the page after setting alarms (a web app opened from the Home Screen can't be returned to by a link). The icon is `apple-touch-icon.png`, a 🌙 on the app's dark background. iOS saves the icon when you add the page, so after it changes, remove the old Home Screen icon and add it again.
 
 ## Run it
 
