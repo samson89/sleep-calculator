@@ -631,7 +631,7 @@
 
     <!-- Shown on Apple devices only (see IS_APPLE in the script). -->
     <p class="alarm-help" id="alarm-help" hidden>
-      Tap a time to set an alarm (needs the 'Set Sleep Alarm' Shortcut).
+      Tap a time to set 5 alarms, 5 minutes apart (needs the 'Set Sleep Alarm' Shortcut).
     </p>
 
     <footer>
@@ -860,54 +860,30 @@
         return (h % 12 || 12) + ':' + (m < 10 ? '0' : '') + m + ' ' + (h < 12 ? 'AM' : 'PM');
       }
 
-      // shortcuts://x-callback-url/run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM&x-success=…
-      // The x-success/x-cancel/x-error addresses bring you back to this page when the Shortcut finishes.
-      function alarmUrl(date) {
-        var back = encodeURIComponent(location.href.split('#')[0]);
-        return 'shortcuts://x-callback-url/run-shortcut?name=' + encodeURIComponent(SHORTCUT_NAME) +
-          '&input=text&text=' + encodeURIComponent(alarmText(date)).replace(/%3A/g, ':') +
-          '&x-success=' + back + '&x-cancel=' + back + '&x-error=' + back;
+      // On "Wake up at…", every time sets the alarms from the chosen wake-up time (set while drawing the list).
+      var wakeAlarmStart = null;
+
+      // One tap sets 5 alarms, 5 minutes apart: the times go to the Shortcut one per line
+      // ("6:15 AM\n6:20 AM\n…"), and the Shortcut creates an alarm for each.
+      var ALARM_COUNT = 5;
+      var ALARM_GAP_MIN = 5;
+
+      // Where Shortcuts sends you back to: this page, with the current tab and any chosen bedtime,
+      // so it reopens exactly where you were (the extra details are cleared from the address on load).
+      function returnUrl() {
+        var params = 'tab=' + mode + (mode === 'now' && bedChosen && bedInput.value ? '&bed=' + bedInput.value : '');
+        return location.href.split('#')[0].split('?')[0] + '?' + params;
       }
 
-      // Staggered alarms: tapping the same card again within 30 seconds of the first tap sets the
-      // next alarm 5 minutes later (6:15, 6:20, 6:25 ...). 30 seconds after the first tap it resets to
-      // the card's own time. Returning from Shortcuts reloads the page, so the taps are kept on the
-      // device for those 30 seconds only.
-      var STAGGER_MIN = 5;
-      var STAGGER_WINDOW_MS = 30000;
-      var TAPS_KEY = 'sc-alarm-taps';
-      var taps = {};
-      try { taps = JSON.parse(localStorage.getItem(TAPS_KEY)) || {}; } catch (e) { taps = {}; }
-      var resetTimer = null;
-      function tapRecord(cycles) {
-        var t = taps[mode + ' ' + cycles];
-        return t && Date.now() - t.firstAt < STAGGER_WINDOW_MS ? t : null;
+      // shortcuts://x-callback-url/run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM%0A6:20%20AM…&x-success=…
+      function alarmUrl(date) {
+        var times = [];
+        for (var i = 0; i < ALARM_COUNT; i++) times.push(alarmText(addMinutes(date, i * ALARM_GAP_MIN)));
+        var back = encodeURIComponent(returnUrl());
+        return 'shortcuts://x-callback-url/run-shortcut?name=' + encodeURIComponent(SHORTCUT_NAME) +
+          '&input=text&text=' + encodeURIComponent(times.join('\n')).replace(/%3A/g, ':') +
+          '&x-success=' + back + '&x-cancel=' + back + '&x-error=' + back;
       }
-      // The alarm time the next tap on this card will set.
-      function nextAlarm(date, cycles) {
-        var t = tapRecord(cycles);
-        return t ? new Date(t.base + t.count * STAGGER_MIN * 60000) : date;
-      }
-      // Redraw when the 30 seconds are up, so the card goes back to its own time.
-      function scheduleReset() {
-        var soonest = Infinity;
-        Object.keys(taps).forEach(function (k) {
-          var left = taps[k].firstAt + STAGGER_WINDOW_MS - Date.now();
-          if (left > 0) soonest = Math.min(soonest, left);
-        });
-        clearTimeout(resetTimer);
-        if (soonest < Infinity) resetTimer = setTimeout(renderResults, soonest + 50);
-      }
-      function recordTap(date, cycles) {
-        var now = Date.now();
-        Object.keys(taps).forEach(function (k) { if (!taps[k] || now - taps[k].firstAt >= STAGGER_WINDOW_MS) delete taps[k]; });
-        var t = tapRecord(cycles) || { base: date.getTime(), count: 0, firstAt: now };
-        t.count += 1;
-        taps[mode + ' ' + cycles] = t;
-        save(TAPS_KEY, JSON.stringify(taps));
-        scheduleReset();
-      }
-      scheduleReset();   // after returning from Shortcuts, still reset on time
 
       // The time on a result card: a tappable alarm link on Apple devices, plain text elsewhere.
       function timeElement(date, cycles) {
@@ -917,20 +893,18 @@
           plain.textContent = formatTime(date);
           return plain;
         }
-        var alarmAt = nextAlarm(date, cycles);   // this tap's alarm time
+        // "Go to bed at…": alarms from this wake-up time. "Wake up at…": alarms from your chosen wake-up time.
+        var alarmStart = mode === 'wake' && wakeAlarmStart ? wakeAlarmStart : date;
         var link = document.createElement('a');
         link.className = 'result-time alarm-link';
-        link.href = alarmUrl(alarmAt);
-        link.setAttribute('aria-label',
-          (mode === 'wake' ? 'Set bedtime reminder for ' : 'Set alarm for ') + formatTime(date));
+        link.href = alarmUrl(alarmStart);
+        link.setAttribute('aria-label', mode === 'wake'
+          ? formatTime(date) + ': set 5 wake-up alarms from ' + formatTime(alarmStart) + ', 5 minutes apart'
+          : 'Set 5 alarms from ' + formatTime(date) + ', 5 minutes apart');
         var label = document.createElement('span');
         label.className = 'alarm-label';
         label.textContent = formatTime(date);
         link.appendChild(label);
-        link.addEventListener('click', function () {
-          recordTap(date, cycles);
-          setTimeout(renderResults, 300);   // show the next (+5 min) time if the page is still here
-        });
         return link;
       }
 
@@ -1012,6 +986,7 @@
           var wake = new Date(nowMs);
           wake.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
           if (wake.getTime() <= nowMs) wake.setDate(wake.getDate() + 1);
+          wakeAlarmStart = wake;
 
           // The green countdown goes on the best option (7h 30m) while that bedtime is still ahead;
           // once it has passed, on the soonest bedtime still ahead.
@@ -1149,6 +1124,18 @@
 
       window.addEventListener('resize', fitNextCard);
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitNextCard);
+
+      try { localStorage.removeItem('sc-alarm-taps'); } catch (e) { /* old 30-second re-tap data, no longer used */ }
+
+      // Back from Shortcuts: reopen on the same tab and chosen bedtime, then clean the address
+      // so opening the app normally still starts on the current time.
+      try {
+        var back = new URLSearchParams(location.search);
+        if (back.get('tab') === 'wake' || back.get('tab') === 'now') mode = back.get('tab');
+        var bed = back.get('bed');
+        if (mode === 'now' && bed && /^\d{2}:\d{2}$/.test(bed)) { bedInput.value = bed; bedChosen = true; }
+        if (location.search) history.replaceState(null, '', location.href.split('?')[0].split('#')[0]);
+      } catch (e) { /* older browsers: just open normally */ }
 
       renderFall();
       setMode(mode);

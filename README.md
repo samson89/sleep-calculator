@@ -24,35 +24,51 @@ Cycle length varies from person to person; treat the results as a guide, not med
 
 ## Tap-to-set-alarm (iPhone, iPad and Mac)
 
-On Apple devices, every time in the results is a link. Tapping it runs the **Set Sleep Alarm** Shortcut, which creates an alarm at that time:
+On Apple devices, every time in the results is a link. One tap runs the **Set Sleep Alarm** Shortcut and creates **5 alarms, 5 minutes apart**, starting at that time (e.g. 6:15, 6:20, 6:25, 6:30, 6:35 AM):
 
-- **Go to bed at…** tab: sets a wake-up alarm.
-- **Wake up at…** tab: sets an alarm at the bedtime, as a reminder to go to bed.
+- **Go to bed at…** tab: wake-up alarms starting at the time you tap.
+- **Wake up at…** tab: whichever bedtime you tap, the 5 alarms start at your chosen wake-up time (e.g. 8:00, 8:05, 8:10, 8:15, 8:20 AM).
 
-Tapping the same time again within 30 seconds sets another alarm 5 minutes later (7:45, then 7:50, then 7:55 …), so you can stack staggered alarms. 30 seconds after the first tap it resets to the card's own time.
+When the Shortcut finishes, you come back to the page on the same tab, with the bedtime you had chosen still set.
 
 On other devices (Android, Windows, Linux) the times are shown as plain text, because the Shortcuts app isn't available there.
 
 ### How the link works
 
-Tapping a time opens a link like this:
+Tapping a time opens a link like this (`%0A` separates the times, one per line):
 
 ```
-shortcuts://x-callback-url/run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM&x-success=https%3A%2F%2Fsamson89.github.io%2Fsleep-calculator%2F&x-cancel=…&x-error=…
+shortcuts://x-callback-url/run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM%0A6:20%20AM%0A6:25%20AM%0A6:30%20AM%0A6:35%20AM&x-success=https%3A%2F%2Fsamson89.github.io%2Fsleep-calculator%2F%3Ftab%3Dnow%26bed%3D23%3A30&x-cancel=…&x-error=…
 ```
 
-iOS briefly switches to the Shortcuts app to run the Shortcut, then the `x-success` address brings you back to the page (`x-cancel` and `x-error` do the same if the Shortcut is cancelled or fails).
+iOS briefly switches to the Shortcuts app to run the Shortcut, then the `x-success` address brings you back to the page (`x-cancel` and `x-error` do the same if it's cancelled or fails). The return address carries the tab and chosen bedtime (`?tab=now&bed=23:30`) so the page reopens where you were; the page then removes them from the address.
 
-The time is always sent in English 12-hour format (`6:15 AM`, `9:45 PM`), even if your device uses a 24-hour clock or another language, because that's the format the Shortcut reads reliably.
+The times are always sent in English 12-hour format (`6:15 AM`, `9:45 PM`), even if your device uses a 24-hour clock or another language, because that's the format the Shortcut reads reliably.
 
 ### Set up the Shortcut (one time)
 
 Build it in the Shortcuts app on your iPhone (or Mac):
 
 1. Tap **+** to create a new Shortcut and name it exactly **Set Sleep Alarm** (the name must match).
-2. Add the action **Get Dates from Input**, using **Shortcut Input**.
-3. Add the action **Create Alarm**, and set its time to the **Dates** from the previous step.
-4. Tap **Done**.
+2. Add **Split Text**: split **Shortcut Input** by **New Lines**.
+3. Add **Repeat with Each**, repeating over **Split Text**.
+4. Inside the repeat, add **Get Dates from Input** using **Repeat Item**.
+5. Inside the repeat, add **Create Alarm** with its time set to **Dates** (optionally give it a label).
+6. Tap **Done**.
+
+```
+Split [Shortcut Input] by [New Lines]
+Repeat with each item in [Split Text]
+    Get dates from [Repeat Item]
+    Create alarm for [Dates]
+End Repeat
+```
+
+Make sure there's no **Stop and output** action before these steps (it would end the Shortcut early). To test it, open this in Safari on your iPhone; you should get three alarms:
+
+```
+shortcuts://run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM%0A6:20%20AM%0A6:25%20AM
+```
 
 The first time you tap a time, iOS may ask for permission to open Shortcuts and to let the Shortcut create alarms. Allow both.
 
