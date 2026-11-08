@@ -941,8 +941,8 @@
       // On "Wake up at…", every time sets the alarms from the chosen wake-up time (set while drawing the list).
       var wakeAlarmStart = null;
 
-      // One tap sets 5 alarms, 5 minutes apart: the times go to the Shortcut one per line
-      // ("6:15 AM\n6:20 AM\n…"), and the Shortcut creates an alarm for each.
+      // One tap sets 5 alarms, 5 minutes apart: the times go to the Shortcut separated by commas
+      // ("6:15 AM,6:20 AM,…"). Commas, not line breaks: with line breaks, Shortcuts didn't come back.
       var ALARM_COUNT = 5;
       var ALARM_GAP_MIN = 5;
 
@@ -953,13 +953,13 @@
         return location.href.split('#')[0].split('?')[0] + '?' + params;
       }
 
-      // shortcuts://x-callback-url/run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM%0A6:20%20AM…&x-success=…
+      // shortcuts://x-callback-url/run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM%2C6:20%20AM…&x-success=…
       function alarmUrl(date) {
         var times = [];
         for (var i = 0; i < ALARM_COUNT; i++) times.push(alarmText(addMinutes(date, i * ALARM_GAP_MIN)));
         var back = encodeURIComponent(returnUrl());
         return 'shortcuts://x-callback-url/run-shortcut?name=' + encodeURIComponent(SHORTCUT_NAME) +
-          '&input=text&text=' + encodeURIComponent(times.join('\n')).replace(/%3A/g, ':') +
+          '&input=text&text=' + encodeURIComponent(times.join(',')).replace(/%3A/g, ':') +
           '&x-success=' + back + '&x-cancel=' + back + '&x-error=' + back;
       }
 

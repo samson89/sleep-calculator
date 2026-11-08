@@ -35,39 +35,39 @@ On other devices (Android, Windows, Linux) the times are shown as plain text, be
 
 ### How the link works
 
-Tapping a time opens a link like this (`%0A` separates the times, one per line):
+Tapping a time opens a link like this (`%2C` is a comma separating the times):
 
 ```
-shortcuts://x-callback-url/run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM%0A6:20%20AM%0A6:25%20AM%0A6:30%20AM%0A6:35%20AM&x-success=https%3A%2F%2Fsamson89.github.io%2Fsleep-calculator%2F%3Ftab%3Dnow%26bed%3D23%3A30&x-cancel=…&x-error=…
+shortcuts://x-callback-url/run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM%2C6:20%20AM%2C6:25%20AM%2C6:30%20AM%2C6:35%20AM&x-success=https%3A%2F%2Fsamson89.github.io%2Fsleep-calculator%2F%3Ftab%3Dnow%26bed%3D23%3A30&x-cancel=…&x-error=…
 ```
 
 iOS briefly switches to the Shortcuts app to run the Shortcut, then the `x-success` address brings you back to the page (`x-cancel` and `x-error` do the same if it's cancelled or fails). The return address carries the tab and chosen bedtime (`?tab=now&bed=23:30`) so the page reopens where you were; the page then removes them from the address.
 
-The times are always sent in English 12-hour format (`6:15 AM`, `9:45 PM`), even if your device uses a 24-hour clock or another language, because that's the format the Shortcut reads reliably.
+The times are separated by commas rather than line breaks: with line breaks, Shortcuts set the alarms but never came back to the page. The times are always sent in English 12-hour format (`6:15 AM`, `9:45 PM`), even if your device uses a 24-hour clock or another language, because that's the format the Shortcut reads reliably.
 
 ### Set up the Shortcut (one time)
 
 Build it in the Shortcuts app on your iPhone (or Mac):
 
 1. Tap **+** to create a new Shortcut and name it exactly **Set Sleep Alarm** (the name must match).
-2. Add **Split Text**: split **Shortcut Input** by **New Lines**.
+2. Add **Split Text**: split **Shortcut Input** by **Custom**, and type a comma (`,`).
 3. Add **Repeat with Each**, repeating over **Split Text**.
 4. Inside the repeat, add **Get Dates from Input** using **Repeat Item**.
 5. Inside the repeat, add **Create Alarm** with its time set to **Dates** (optionally give it a label).
 6. Tap **Done**.
 
 ```
-Split [Shortcut Input] by [New Lines]
+Split [Shortcut Input] by [,]
 Repeat with each item in [Split Text]
     Get dates from [Repeat Item]
     Create alarm for [Dates]
 End Repeat
 ```
 
-Make sure there's no **Stop and output** action before these steps (it would end the Shortcut early). To test it, open this in Safari on your iPhone; you should get three alarms:
+Make sure there's no **Stop and output** action before these steps (it would end the Shortcut early). To test it, open this in Safari on your iPhone; you should get three alarms and be brought back to the page:
 
 ```
-shortcuts://run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM%0A6:20%20AM%0A6:25%20AM
+shortcuts://x-callback-url/run-shortcut?name=Set%20Sleep%20Alarm&input=text&text=6:15%20AM%2C6:20%20AM%2C6:25%20AM&x-success=https%3A%2F%2Fsamson89.github.io%2Fsleep-calculator%2F
 ```
 
 The first time you tap a time, iOS may ask for permission to open Shortcuts and to let the Shortcut create alarms. Allow both.
