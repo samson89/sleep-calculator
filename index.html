@@ -501,6 +501,7 @@
     }
 
     /* The top recommended time's pill is green; the second stays orange. Cards have no coloured borders. */
+    /* The best recommended option (most sleep up to 8 hours) has the green pill; others stay orange. */
     .badge.badge-top {
       color: var(--confirm);
       border-color: var(--confirm);
@@ -508,12 +509,23 @@
 
     .badge {
       flex-shrink: 0;
+      align-self: center;
       font-size: 0.875em;
       font-weight: 700;
+      line-height: 1.2;
       color: var(--accent);
       border: 1px solid var(--accent);
       border-radius: 999px;
-      padding: 0.125em 0.625em;
+      padding: 0.2em 0.625em 0.3em;   /* fallback: the font sits slightly high, so a little more below */
+    }
+
+    /* Optically centre "Recommended" in the pill: trim the text box to the capital-letter height
+       and the baseline, then use equal padding above and below. (Safari 18.2+, Chrome 133+.) */
+    @supports (text-box: trim-both cap alphabetic) {
+      .badge {
+        text-box: trim-both cap alphabetic;
+        padding: 0.45em 0.625em;
+      }
     }
 
     .empty {
@@ -739,6 +751,12 @@
       var MIN_FALL = 0;
       var MAX_FALL = 120;
       var RECOMMENDED = { 5: true, 6: true };
+      // The best recommended option gets the green pill: the most sleep without going over 8 hours
+      // (5 cycles = 7h 30m). Options over 8 hours (6 cycles = 9h) keep the orange pill.
+      var BEST_MAX_MIN = 8 * 60;
+      var BEST_CYCLES = Object.keys(RECOMMENDED).map(Number)
+        .filter(function (c) { return c * CYCLE_MIN <= BEST_MAX_MIN; })
+        .sort(function (a, b) { return b - a; })[0];
 
       // Tap-to-set-alarm via the iOS/macOS Shortcut named exactly "Set Sleep Alarm".
       var SHORTCUT_NAME = 'Set Sleep Alarm';
@@ -930,7 +948,7 @@
         var badge = null;
         if (isRecommended) {
           badge = document.createElement('span');
-          badge.className = 'badge' + (cycles === 6 ? ' badge-top' : '');   // top recommended: green
+          badge.className = 'badge' + (cycles === BEST_CYCLES ? ' badge-top' : '');   // best option: green
           badge.textContent = 'Recommended';
         }
 
@@ -995,10 +1013,15 @@
           wake.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
           if (wake.getTime() <= nowMs) wake.setDate(wake.getDate() + 1);
 
-          // Highlight the soonest bedtime that hasn't passed yet: the most cycles still possible.
+          // The green countdown goes on the best option (7h 30m) while that bedtime is still ahead;
+          // once it has passed, on the soonest bedtime still ahead.
           var nextCycles = 0;
-          for (cycles = 6; cycles >= 1; cycles--) {
-            if (addMinutes(wake, -(cycles * CYCLE_MIN + fallMinutes)).getTime() >= nowMs) { nextCycles = cycles; break; }
+          if (addMinutes(wake, -(BEST_CYCLES * CYCLE_MIN + fallMinutes)).getTime() >= nowMs) {
+            nextCycles = BEST_CYCLES;
+          } else {
+            for (cycles = 6; cycles >= 1; cycles--) {
+              if (addMinutes(wake, -(cycles * CYCLE_MIN + fallMinutes)).getTime() >= nowMs) { nextCycles = cycles; break; }
+            }
           }
 
           // 6 cycles at the top (earliest bedtime) down to 1 cycle at the bottom.
