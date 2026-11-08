@@ -61,9 +61,12 @@
       font-size: 1.125rem; /* 18px */
       line-height: 1.5;
       min-height: 100vh;
+      position: relative;   /* the sky behind the results is positioned against the whole page */
     }
 
     main {
+      position: relative;
+      z-index: 1;           /* page content sits above the sky behind the results */
       max-width: 30rem;
       margin: 0 auto;
       /* Extra top space for the stars; full screen on iPhone, also clear the clock/battery area. */
@@ -98,15 +101,35 @@
       pointer-events: none;
     }
 
+    /* Sky behind the results: full width, from just above the results heading to the bottom of
+       the page. Cards stay solid on top; stars show in the margins, between cards and in the footer. */
+    .sky-below {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .sky-below i {
+      position: absolute;
+      font-style: normal;
+      line-height: 1;
+      color: var(--moon);
+    }
+
     /* A few stars gently fade and return; they never get brighter than their resting level. */
-    .stars i.twinkle { animation: twinkle 4s ease-in-out infinite; }
+    .stars i.twinkle,
+    .sky-below i.twinkle { animation: twinkle 4s ease-in-out infinite; }
 
     @keyframes twinkle {
       50% { opacity: 0.1; transform: scale(0.8); }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .stars i.twinkle { animation: none; }
+      .stars i.twinkle,
+      .sky-below i.twinkle { animation: none; }
     }
 
     /* Title links to the app's home address, like a site logo; looks like plain text. */
@@ -580,6 +603,7 @@
   </style>
 </head>
 <body>
+  <div class="sky-below" id="sky-below" aria-hidden="true"></div>
   <main>
     <header class="masthead">
       <span class="stars" aria-hidden="true"></span>
@@ -744,6 +768,63 @@
       fitStars();
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitStars);
       window.addEventListener('resize', fitStars);
+    })();
+
+    // Sky behind the results: same style as the title stars but fainter (text sits on top), placed
+    // fresh on every load and spread evenly with no holes. Positions are kept as percentages, so the
+    // sky stretches with the page; it never sits behind the heading, help line or footer text.
+    (function makeSkyBelow() {
+      var sky = document.getElementById('sky-below');
+      var main = document.querySelector('main');
+      var heading = document.getElementById('results-title');
+      if (!sky || !main || !heading) return;
+      var SIZES = [3, 4, 4, 4, 5, 5, 5, 6, 7];   // mostly tiny
+      var COUNT = Math.max(40, Math.min(220, Math.round(window.innerWidth * Math.max(700, window.innerHeight) / 2600)));
+      var pts = [];
+      for (var n = 0; n < COUNT; n++) {          // best-candidate sampling in a unit square (scaled by the screen's shape)
+        var best = null, bestD = -1, aspect = Math.max(700, window.innerHeight) / Math.max(320, window.innerWidth);
+        for (var k = 0; k < 25; k++) {
+          var x = Math.random(), y = Math.random(), d = Infinity;
+          for (var j = 0; j < pts.length; j++) {
+            var dx = x - pts[j].x, dy = (y - pts[j].y) * aspect;
+            d = Math.min(d, dx * dx + dy * dy);
+          }
+          if (d > bestD) { bestD = d; best = { x: x, y: y }; }
+        }
+        pts.push(best);
+      }
+      var twinkles = 0;
+      sky.innerHTML = pts.map(function (p) {
+        var size = SIZES[Math.floor(Math.random() * SIZES.length)];
+        var max = size >= 6 ? 0.4 : 0.55;                      // fainter than the title stars; bigger = dimmer
+        var twinkle = twinkles < 6 && size >= 4 && Math.random() < 0.08;
+        if (twinkle) twinkles++;
+        var style = 'left:' + (p.x * 98).toFixed(2) + '%;top:' + (p.y * 98).toFixed(2) + '%;font-size:' + size + 'px;opacity:' + (max * (0.6 + Math.random() * 0.4)).toFixed(2);
+        if (twinkle) style += ';animation-duration:' + (3 + Math.random() * 3).toFixed(1) + 's;animation-delay:-' + (Math.random() * 6).toFixed(1) + 's';
+        return '<i' + (twinkle ? ' class="twinkle"' : '') + ' style="' + style + '">' + (size <= 5 ? '•' : '✦') + '</i>';
+      }).join('');
+
+      // Start just above the results heading; keep stars out from behind text. Re-run when the layout changes.
+      function fitSky() {
+        var top = heading.getBoundingClientRect().top + window.scrollY - 24;
+        sky.style.top = Math.max(0, Math.round(top)) + 'px';
+        var textBoxes = [];
+        document.querySelectorAll('#results-title, #alarm-help:not([hidden]), footer p, #results .empty').forEach(function (el) {
+          var range = document.createRange();
+          range.selectNodeContents(el);
+          Array.prototype.forEach.call(range.getClientRects(), function (r) { textBoxes.push([r.left - 6, r.top - 4, r.right + 6, r.bottom + 4]); });
+        });
+        sky.querySelectorAll('i').forEach(function (star) {
+          star.style.visibility = '';
+          var s = star.getBoundingClientRect();
+          var behindText = textBoxes.some(function (b) { return s.right > b[0] && s.left < b[2] && s.bottom > b[1] && s.top < b[3]; });
+          if (behindText) star.style.visibility = 'hidden';
+        });
+      }
+      fitSky();
+      if (window.ResizeObserver) new ResizeObserver(fitSky).observe(main);
+      window.addEventListener('resize', fitSky);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitSky);
     })();
 
     (function () {
