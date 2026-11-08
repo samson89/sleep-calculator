@@ -5,7 +5,7 @@ A simple, dark-mode web page that helps you time your sleep around 90-minute sle
 ## Features
 
 - **Go to bed at…** — get wake-up times from the current time, or tap the time to choose a different bedtime (**↺ Now** goes back to the current time); from 6 sleep cycles at the top down to 1 cycle at the bottom (the same order as **Wake up at…**). This is the first tab and the page always opens on it.
-- **Wake up at…** — pick the time you want to wake up (8:00 AM to start; the app remembers the last time you set) and get bedtimes from 6 sleep cycles at the top down to 1 cycle at the bottom. A live green countdown (e.g. "in 45 mins") shows on the 7h 30m bedtime while it's still ahead, otherwise on the soonest bedtime still ahead.
+- **Wake up at…** — pick the time you want to wake up (8:00 AM to start; the app remembers the last time you set) and get bedtimes from 6 sleep cycles at the top down to 1 cycle at the bottom. A live green countdown (e.g. "in 45 mins") shows on the 7h 30m bedtime while it's still ahead, otherwise on the soonest bedtime still ahead. Bedtimes that have already passed are greyed out (pill included) and marked "passed".
 - **Time to fall asleep** — shown as "🌙 15 min to fall asleep" under the time. Tap it to open − / + buttons that change it 1 minute at a time (default 15 minutes, range 0–120); tap the value to close it again.
 - Each result shows the total sleep and number of cycles, e.g. `7h 30m of sleep · 5 cycles`. 5 and 6 cycles are marked **Recommended**: a green pill for 7h 30m (5 cycles), the best option without going over 8 hours, and an orange pill for 9h (6 cycles).
 - Dark mode only, with a warm accent colour and text that meets WCAG AA contrast.

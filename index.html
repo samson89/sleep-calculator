@@ -542,6 +542,12 @@
       }
     }
 
+    /* Bedtimes that have already passed ("Wake up at…"): dimmed to grey, pill included, and labelled
+       "passed". Grey text keeps full readability (8:1 contrast) instead of fading with opacity. */
+    .result.passed .result-time { color: var(--text-muted); font-weight: 600; }
+    .result.passed .badge,
+    .result.passed .badge.badge-top { color: var(--text-muted); border-color: var(--border); }
+
     .empty {
       color: var(--text-muted);
     }
@@ -980,17 +986,18 @@
         return link;
       }
 
-      function resultItem(date, cycles, countdownMinutes) {
+      function resultItem(date, cycles, countdownMinutes, passed) {
         var isNext = countdownMinutes !== undefined;
         var isRecommended = !!RECOMMENDED[cycles];
         var li = document.createElement('li');
         li.className = 'result' + (isRecommended ? ' recommended' : '') +
-          (isNext ? ' next' + (isRecommended ? ' has-pill' : '') : '');
+          (isNext ? ' next' + (isRecommended ? ' has-pill' : '') : '') + (passed ? ' passed' : '');
 
         var time = timeElement(date, cycles);
         var meta = document.createElement('div');
         meta.className = 'result-meta';
         meta.textContent = formatDuration(cycles * CYCLE_MIN) + ' of sleep · ' + cycles + (cycles === 1 ? ' cycle' : ' cycles');
+        if (passed) meta.textContent += ' · passed';   // said in words, not just shown by dimming
         var badge = null;
         if (isRecommended) {
           badge = document.createElement('span');
@@ -1075,7 +1082,7 @@
           for (cycles = 6; cycles >= 1; cycles--) {
             var bedtime = addMinutes(wake, -(cycles * CYCLE_MIN + fallMinutes));
             var countdownMinutes = cycles === nextCycles ? Math.ceil((bedtime.getTime() - nowMs) / 60000) : undefined;
-            resultsEl.appendChild(resultItem(bedtime, cycles, countdownMinutes));
+            resultsEl.appendChild(resultItem(bedtime, cycles, countdownMinutes, bedtime.getTime() < nowMs));
           }
           fitNextCard();
         } else {
