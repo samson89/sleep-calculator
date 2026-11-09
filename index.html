@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#0e1116">
+  <meta name="theme-color" content="#070b1d">
   <meta name="description" content="Find the best times to go to bed or wake up, based on 90-minute sleep cycles.">
   <title>Sleep Calculator</title>
   <!-- Home-screen icon on iPhone/iPad (and the browser-tab icon): 🌙 on the app's dark background. -->
@@ -17,10 +17,12 @@
     :root {
       color-scheme: dark;
       --bg: #0e1116;          /* page background */
-      --surface: #161a21;     /* cards */
-      --surface-2: #1e232c;   /* inputs, buttons */
-      --border: #3a4250;      /* decorative card outlines */
-      --control-border: #6b7485; /* outlines of interactive controls (>= 3:1) */
+      --surface: rgba(26, 33, 64, 0.55);   /* frosted-glass cards: the night sky shows faintly through */
+      --surface-2: rgba(40, 50, 92, 0.55); /* frosted inputs and buttons */
+      --sky-top: #070b1d;     /* night-sky gradient, top */
+      --sky-bottom: #17204a;  /* night-sky gradient, bottom */
+      --border: rgba(160, 175, 230, 0.18); /* decorative card outlines (soft, on frosted glass) */
+      --control-border: #7d87a4; /* outlines of interactive controls (>= 3:1 on the night sky and frosted glass) */
       --text: #e3e5ea;        /* primary text */
       --text-muted: #a9b0bd;  /* secondary text */
       --hover: #272d38;       /* hovered control background */
@@ -46,22 +48,23 @@
 
     [hidden] { display: none !important; }
 
-    html { -webkit-text-size-adjust: 100%; }
+    html { -webkit-text-size-adjust: 100%; background: var(--sky-top); }
 
     body {
       margin: 0;
-      background: var(--bg);
+      background: linear-gradient(180deg, var(--sky-top) 0%, #0d1430 38%, var(--sky-bottom) 100%);
+      background-color: var(--sky-top);
       color: var(--text);
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       font-size: 1.125rem; /* 18px */
       line-height: 1.5;
       min-height: 100vh;
-      position: relative;   /* the sky behind the results is positioned against the whole page */
+      position: relative;   /* the night sky is positioned against the whole page */
     }
 
     main {
       position: relative;
-      z-index: 1;           /* page content sits above the sky behind the results */
+      z-index: 1;           /* page content sits above the night sky */
       max-width: 30rem;
       margin: 0 auto;
       padding: 2.75rem 1rem 3rem; /* extra top space for the stars above the title */
@@ -80,47 +83,34 @@
       text-shadow: 0 0 16px rgba(247, 231, 166, 0.3);
     }
 
-    /* Decorative stars above, behind and beside the title: small, faint, never on top of the text. */
-    .masthead h1 { position: relative; z-index: 1; }
-
-    .stars i {
+    /* Night sky (like the iOS Weather app): many tiny round stars over the whole page, drawn on a
+       canvas, plus a few twinkling ones. It scrolls with the page so stars never sit on any text. */
+    #night-sky {
       position: absolute;
-      z-index: 0;
-      font-style: normal;
-      line-height: 1;
-      color: var(--moon);
-      pointer-events: none;
-    }
-
-    /* Sky behind the results: full width, from just above the results heading to the bottom of
-       the page. Cards stay solid on top; stars show in the margins, between cards and in the footer. */
-    .sky-below {
-      position: absolute;
+      top: 0;
       left: 0;
-      right: 0;
-      bottom: 0;
+      width: 100%;
+      z-index: 0;
       overflow: hidden;
       pointer-events: none;
     }
 
-    .sky-below i {
+    #night-sky canvas { display: block; width: 100%; height: 100%; }
+
+    #night-sky i {
       position: absolute;
-      font-style: normal;
-      line-height: 1;
-      color: var(--moon);
+      border-radius: 50%;
     }
 
     /* A few stars gently fade and return; they never get brighter than their resting level. */
-    .stars i.twinkle,
-    .sky-below i.twinkle { animation: twinkle 4s ease-in-out infinite; }
+    #night-sky i.twinkle { animation: twinkle 4s ease-in-out infinite; }
 
     @keyframes twinkle {
       50% { opacity: 0.1; transform: scale(0.8); }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .stars i.twinkle,
-      .sky-below i.twinkle { animation: none; }
+      #night-sky i.twinkle { animation: none; }
     }
 
     /* Title links to the app's home address, like a site logo; looks like plain text. */
@@ -151,6 +141,12 @@
     }
 
     /* ---------- Tabs ---------- */
+    /* Frosted glass: tabs, cards and results blur the night sky behind them. */
+    .tabs, .card, .result {
+      -webkit-backdrop-filter: blur(14px) saturate(120%);
+      backdrop-filter: blur(14px) saturate(120%);
+    }
+
     .tabs {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -600,10 +596,9 @@
   </style>
 </head>
 <body>
-  <div class="sky-below" id="sky-below" aria-hidden="true"></div>
+  <div id="night-sky" aria-hidden="true"><canvas></canvas></div>
   <main>
     <header class="masthead">
-      <span class="stars" aria-hidden="true"></span>
       <h1><a class="home-link" href="./" aria-current="page">Sleep Calculator</a></h1>
     </header>
     <p class="subtitle">Wake up feeling more refreshed and alert at the end of a full sleep cycle, not in the middle of one.</p>
@@ -615,7 +610,7 @@
 
     <section class="card" role="tabpanel" id="panel-wake" aria-labelledby="tab-wake">
       <label class="field-label" for="wake-time">I want to wake up at</label>
-      <input type="time" id="wake-time" value="08:00">
+      <input type="time" id="wake-time" value="08:00" required>
 
       <!-- Moved into whichever tab panel is showing. -->
       <div class="fall" id="fall">
@@ -644,7 +639,7 @@
         <button type="button" class="text-btn" id="bed-reset" aria-label="Now, use the current time" hidden><svg class="reset-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 5.8 H12 A7.5 7.5 0 1 1 4.76 11.36"/><path d="M10.5 2.8 L7.5 5.8 L10.5 8.8"/></svg>Now</button>
       </div>
       <!-- Follows the current time until the user picks a bedtime. -->
-      <input type="time" id="bed-time">
+      <input type="time" id="bed-time" required>
     </section>
 
     <h2 class="results-title" id="results-title">Go to bed at</h2>
@@ -663,165 +658,98 @@
   </main>
 
   <script>
-    // Starry sky behind the title: new positions on every page load, and a few stars twinkle.
-    // Stars are never brighter than 85% (the title is 100%); bigger stars are dimmer.
-    (function makeStars() {
-      var layer = document.querySelector('.stars');
-      if (!layer) return;
-      // Even-but-random placement ("best candidate" sampling): each new star goes in the emptiest
-      // of several random spots, so the sky looks natural but never has holes. New pattern every load.
-      var TOP = -40, BOTTOM = 32;                       // px relative to the title's top; clear of the subtitle
-      var W = layer.parentNode.getBoundingClientRect().width || 358, H = BOTTOM - TOP;
-      var COUNT = Math.max(20, Math.min(38, Math.round(W * H / 920)));   // same density at any width
-      var SIZES = [4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 7, 9];   // mostly small; the biggest (9px) is rare
+    // Night sky over the whole page, in the style of the iOS Weather app: many tiny round stars,
+    // mostly very faint, a few brighter ones with a soft glow, slightly clustered like a real sky,
+    // in white, bluish and warm tints. A new sky on every load. Static stars are drawn on a canvas;
+    // about 20 are separate elements that twinkle (only ever dimming; off with Reduce Motion).
+    // Rules: no star on or right next to text outside the cards, and none above an "l" in the title
+    // (it would look like an "i"). Positions are stored as fractions of the page, so the sky stretches
+    // with the page and the rules are re-checked whenever the layout changes.
+    (function makeNightSky() {
+      var sky = document.getElementById('night-sky');
+      var canvas = sky && sky.querySelector('canvas');
+      if (!canvas || !canvas.getContext) return;
+      var ctx = canvas.getContext('2d');
+      var rand = Math.random;
+      var W0 = document.documentElement.clientWidth, H0 = Math.max(document.documentElement.scrollHeight, window.innerHeight);
+      var count = Math.max(80, Math.min(450, Math.round(W0 * H0 / 1000)));
+      var centres = [];
+      for (var q = 0; q < 6; q++) centres.push([rand(), rand()]);
       var stars = [];
-      for (var n = 0; n < COUNT; n++) {
-        var best = null, bestDist = -1;
-        for (var k = 0; k < 40; k++) {
-          var cx = Math.random() * W * 0.97, cy = TOP + Math.random() * H;
-          var d = Infinity;
-          for (var j = 0; j < stars.length; j++) {
-            var dx = cx - stars[j].x, dy = cy - stars[j].y;
-            d = Math.min(d, dx * dx + dy * dy);
-          }
-          if (d > bestDist) { bestDist = d; best = { x: cx, y: cy }; }
-        }
-        stars.push(best);
+      for (var i = 0; i < count; i++) {
+        var x, y;
+        if (rand() < 0.3) {                         // 30% gathered loosely around a few centres
+          var c = centres[i % centres.length];
+          x = c[0] + (rand() + rand() + rand() - 1.5) * 90 / W0;
+          y = c[1] + (rand() + rand() + rand() - 1.5) * 70 / H0;
+        } else { x = rand(); y = rand(); }
+        if (x < 0 || x > 1 || y < 0 || y > 1) continue;
+        var b = Math.pow(rand(), 4);                // brightness: most stars faint, a few bright
+        var tone = rand();
+        stars.push({ x: x, y: y, alpha: 0.12 + b * 0.85, r: 0.45 + b * 1.1, glow: b > 0.55,
+          col: tone < 0.6 ? '255,255,255' : tone < 0.9 ? '205,220,255' : '255,240,214', twinkle: false });
       }
-      stars = stars.map(function (p) {
-        var size = SIZES[Math.floor(Math.random() * SIZES.length)];
-        var max = size >= 9 ? 0.6 : size >= 6 ? 0.75 : 0.85;
-        return {
-          left: p.x / W * 100,
-          top: Math.round(Math.min(p.y, BOTTOM - size)),
-          size: size,
-          opacity: max * (0.65 + Math.random() * 0.35),
-          twinkle: false
-        };
+      var bright = stars.filter(function (s) { return s.alpha > 0.3 && !s.glow; });
+      for (var t = 0; t < 20 && bright.length; t++) bright.splice(Math.floor(rand() * bright.length), 1)[0].twinkle = true;
+      var twinkleEls = stars.filter(function (s) { return s.twinkle; }).map(function (s) {
+        var el = document.createElement('i');
+        el.className = 'twinkle';
+        el.style.cssText = 'width:' + (s.r * 2).toFixed(2) + 'px;height:' + (s.r * 2).toFixed(2) + 'px;background:rgba(' + s.col + ',' + s.alpha.toFixed(2) + ');' +
+          'animation-duration:' + (3 + rand() * 3).toFixed(1) + 's;animation-delay:-' + (rand() * 6).toFixed(1) + 's';
+        sky.appendChild(el);
+        return { star: s, el: el };
       });
-      // Pick 4 random stars (not the tiniest) to twinkle, each at its own pace.
-      var candidates = stars.filter(function (s) { return s.size >= 5; });
-      for (var t = 0; t < 4 && candidates.length; t++) {
-        candidates.splice(Math.floor(Math.random() * candidates.length), 1)[0].twinkle = true;
-      }
-      layer.innerHTML = stars.map(function (s) {
-        var style = 'top:' + s.top + 'px';
-        if (s.twinkle) style += ';animation-duration:' + (3 + Math.random() * 3).toFixed(1) + 's;animation-delay:-' + (Math.random() * 6).toFixed(1) + 's';
-        return '<i' + (s.twinkle ? ' class="twinkle"' : '') + ' data-left="' + s.left.toFixed(1) + '" data-size="' + s.size +
-          '" data-opacity="' + s.opacity.toFixed(2) + '" style="' + style + '"></i>';
-      }).join('');
 
-      // Fit the stars around the title (runs on load, once the title font has loaded, and on resize):
-      // - never above an "l" (it would look like an "i"): nudge the star sideways instead of removing it,
-      //   so the sky stays evenly filled;
-      // - behind the title text, only tiny faint dots, so the title stays easy to read.
-      function fitStars() {
-        var text = document.querySelector('.home-link');
-        text = text && text.firstChild;
-        if (!text || text.nodeType !== 3) return;
-        var range = document.createRange();
-        range.selectNodeContents(text);
-        var textBox = range.getBoundingClientRect();
-        var columns = [];
-        for (var i = 0; i < text.data.length; i++) {
-          if (text.data.charAt(i) !== 'l') continue;
-          range.setStart(text, i); range.setEnd(text, i + 1);
-          var lr = range.getBoundingClientRect();
-          columns.push([lr.left - 3, lr.right + 3]);            // a little margin either side
+      function draw() {
+        var W = document.documentElement.clientWidth;
+        sky.style.height = '0px';                    // measure the page without the sky itself
+        var H = Math.max(document.documentElement.scrollHeight, window.innerHeight);
+        sky.style.height = H + 'px';
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, W, H);
+        // Text to keep clear (page coordinates), plus the column above each "l" in the title.
+        var clear = [], sy = window.scrollY, sx = window.scrollX;
+        document.querySelectorAll('.home-link, .subtitle, #results-title, #alarm-help:not([hidden]), footer p, #results .empty').forEach(function (el) {
+          var rg = document.createRange(); rg.selectNodeContents(el);
+          Array.prototype.forEach.call(rg.getClientRects(), function (r) { clear.push([r.left + sx - 4, r.top + sy - 3, r.right + sx + 4, r.bottom + sy + 3]); });
+        });
+        var title = document.querySelector('.home-link'), tn = title && title.firstChild;
+        if (tn && tn.nodeType === 3) {
+          var lr = document.createRange();
+          for (var k = 0; k < tn.data.length; k++) {
+            if (tn.data.charAt(k) !== 'l') continue;
+            lr.setStart(tn, k); lr.setEnd(tn, k + 1);
+            var q2 = lr.getBoundingClientRect();
+            clear.push([q2.left + sx - 3, 0, q2.right + sx + 3, q2.bottom + sy]);
+          }
         }
-        var box = layer.parentNode.getBoundingClientRect();   // the title area the stars are positioned in
-        var overL = function (l, r) { return columns.some(function (c) { return r > c[0] && l < c[1]; }); };
-        layer.querySelectorAll('i').forEach(function (star) {
-          var size = +star.dataset.size, opacity = +star.dataset.opacity;
-          star.style.visibility = '';
-          star.style.left = star.dataset.left + '%';
-          star.style.fontSize = size + 'px';
-          star.style.opacity = opacity;
-          star.textContent = size <= 5 ? '•' : '✦';
-          var sr = star.getBoundingClientRect();
-          // Behind the title text: shrink to a tiny, faint dot.
-          if (sr.bottom > textBox.top + 4 && sr.right > textBox.left && sr.left < textBox.right) {
-            star.style.fontSize = '4px';
-            star.style.opacity = Math.min(opacity, 0.3);
-            star.textContent = '•';
-            sr = star.getBoundingClientRect();
+        var onText = function (x, y, r) { return clear.some(function (bx) { return x + r > bx[0] && x - r < bx[2] && y + r > bx[1] && y - r < bx[3]; }); };
+        stars.forEach(function (s) {
+          if (s.twinkle) return;
+          var x = s.x * W, y = s.y * H;
+          if (onText(x, y, s.r * (s.glow ? 5 : 1.5))) return;
+          if (s.glow) {
+            var g = ctx.createRadialGradient(x, y, 0, x, y, s.r * 5);
+            g.addColorStop(0, 'rgba(' + s.col + ',' + (s.alpha * 0.35) + ')'); g.addColorStop(1, 'rgba(' + s.col + ',0)');
+            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, s.r * 5, 0, Math.PI * 2); ctx.fill();
           }
-          // Over an "l": move just past the nearer side of its column (or hide if there's no room).
-          for (var k = 0; k < columns.length; k++) {
-            var c = columns[k];
-            if (!(sr.right > c[0] && sr.left < c[1])) continue;
-            var w = sr.width;
-            var options = (sr.left + w / 2 < (c[0] + c[1]) / 2) ? [c[0] - w - 1, c[1] + 1] : [c[1] + 1, c[0] - w - 1];
-            var placed = options.some(function (x) {
-              if (x < box.left || x + w > box.right || overL(x, x + w)) return false;
-              star.style.left = (x - box.left) + 'px';
-              return true;
-            });
-            if (!placed) star.style.visibility = 'hidden';
-            break;
-          }
+          ctx.fillStyle = 'rgba(' + s.col + ',' + s.alpha + ')';
+          ctx.beginPath(); ctx.arc(x, y, s.r, 0, Math.PI * 2); ctx.fill();
+        });
+        twinkleEls.forEach(function (t) {
+          var x = t.star.x * W, y = t.star.y * H;
+          t.el.style.left = (x - t.star.r) + 'px'; t.el.style.top = (y - t.star.r) + 'px';
+          t.el.style.display = onText(x, y, t.star.r * 1.5) ? 'none' : '';
         });
       }
-      fitStars();
-      if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitStars);
-      window.addEventListener('resize', fitStars);
-    })();
-
-    // Sky behind the results: same style as the title stars but fainter (text sits on top), placed
-    // fresh on every load and spread evenly with no holes. Positions are kept as percentages, so the
-    // sky stretches with the page; it never sits behind the heading, help line or footer text.
-    (function makeSkyBelow() {
-      var sky = document.getElementById('sky-below');
-      var main = document.querySelector('main');
-      var heading = document.getElementById('results-title');
-      if (!sky || !main || !heading) return;
-      var SIZES = [3, 4, 4, 4, 5, 5, 5, 6, 7];   // mostly tiny
-      var COUNT = Math.max(40, Math.min(220, Math.round(window.innerWidth * Math.max(700, window.innerHeight) / 2600)));
-      var pts = [];
-      for (var n = 0; n < COUNT; n++) {          // best-candidate sampling in a unit square (scaled by the screen's shape)
-        var best = null, bestD = -1, aspect = Math.max(700, window.innerHeight) / Math.max(320, window.innerWidth);
-        for (var k = 0; k < 25; k++) {
-          var x = Math.random(), y = Math.random(), d = Infinity;
-          for (var j = 0; j < pts.length; j++) {
-            var dx = x - pts[j].x, dy = (y - pts[j].y) * aspect;
-            d = Math.min(d, dx * dx + dy * dy);
-          }
-          if (d > bestD) { bestD = d; best = { x: x, y: y }; }
-        }
-        pts.push(best);
-      }
-      var twinkles = 0;
-      sky.innerHTML = pts.map(function (p) {
-        var size = SIZES[Math.floor(Math.random() * SIZES.length)];
-        var max = size >= 6 ? 0.4 : 0.55;                      // fainter than the title stars; bigger = dimmer
-        var twinkle = twinkles < 6 && size >= 4 && Math.random() < 0.08;
-        if (twinkle) twinkles++;
-        var style = 'left:' + (p.x * 98).toFixed(2) + '%;top:' + (p.y * 98).toFixed(2) + '%;font-size:' + size + 'px;opacity:' + (max * (0.6 + Math.random() * 0.4)).toFixed(2);
-        if (twinkle) style += ';animation-duration:' + (3 + Math.random() * 3).toFixed(1) + 's;animation-delay:-' + (Math.random() * 6).toFixed(1) + 's';
-        return '<i' + (twinkle ? ' class="twinkle"' : '') + ' style="' + style + '">' + (size <= 5 ? '•' : '✦') + '</i>';
-      }).join('');
-
-      // Start just above the results heading; keep stars out from behind text. Re-run when the layout changes.
-      function fitSky() {
-        var top = heading.getBoundingClientRect().top + window.scrollY - 24;
-        sky.style.top = Math.max(0, Math.round(top)) + 'px';
-        var textBoxes = [];
-        document.querySelectorAll('#results-title, #alarm-help:not([hidden]), footer p, #results .empty').forEach(function (el) {
-          var range = document.createRange();
-          range.selectNodeContents(el);
-          Array.prototype.forEach.call(range.getClientRects(), function (r) { textBoxes.push([r.left - 6, r.top - 4, r.right + 6, r.bottom + 4]); });
-        });
-        sky.querySelectorAll('i').forEach(function (star) {
-          star.style.visibility = '';
-          var s = star.getBoundingClientRect();
-          var behindText = textBoxes.some(function (b) { return s.right > b[0] && s.left < b[2] && s.bottom > b[1] && s.top < b[3]; });
-          if (behindText) star.style.visibility = 'hidden';
-        });
-      }
-      fitSky();
-      if (window.ResizeObserver) new ResizeObserver(fitSky).observe(main);
-      window.addEventListener('resize', fitSky);
-      if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitSky);
+      var pending = false;
+      function redraw() { if (pending) return; pending = true; requestAnimationFrame(function () { pending = false; draw(); }); }
+      draw();
+      if (window.ResizeObserver) new ResizeObserver(redraw).observe(document.querySelector('main'));
+      window.addEventListener('resize', redraw);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(redraw);
     })();
 
     (function () {
@@ -878,7 +806,11 @@
       }
 
       // Uses the device's own 12- or 24-hour preference.
-      var timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+      // Rebuilt on every redraw so it always uses the device's current time zone (e.g. after travelling);
+      // a formatter made once would keep showing the old zone while the calculations use the new one.
+      var timeFormat = null;
+      function refreshTimeFormat() { timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }); }
+      refreshTimeFormat();
       function formatTime(date) { return timeFormat.format(date); }
 
       function formatDuration(totalMinutes) {
@@ -897,13 +829,26 @@
           (date.getMinutes() < 10 ? '0' : '') + date.getMinutes();
       }
 
-      // The next time the clock shows h:m, at or after fromMs (today, otherwise tomorrow).
-      // Each candidate is built fresh from the calendar date so clock changes can't shift it.
-      function nextOccurrence(h, m, fromMs) {
+      // The next moment the clock shows h:m, after fromMs (or at it, if inclusive).
+      // Built fresh from the calendar date each time, never by adjusting an existing date, and aware of
+      // clock changes:
+      //  - a time skipped when clocks go forward (e.g. 2:30 AM) maps forward to 3:30 AM (standard JavaScript rule);
+      //  - a time repeated when clocks go back (e.g. 1:30 AM) happens twice, and the first one still ahead is used.
+      // Lengths of time (cycles, falling asleep, alarm spacing) are always added as real elapsed minutes.
+      function nextWallTime(h, m, fromMs, inclusive) {
         var from = new Date(fromMs);
-        var c = new Date(from.getFullYear(), from.getMonth(), from.getDate(), h, m);
-        if (c.getTime() < fromMs) c = new Date(from.getFullYear(), from.getMonth(), from.getDate() + 1, h, m);
-        return c;
+        for (var day = 0; day <= 2; day++) {
+          var first = new Date(from.getFullYear(), from.getMonth(), from.getDate() + day, h, m);
+          var moments = [first.getTime()];
+          [30, 60].forEach(function (shift) {     // the repeated hour: the same clock time again (US changes are 1 h)
+            var again = new Date(first.getTime() + shift * 60000);
+            if (again.getHours() === h && again.getMinutes() === m) moments.push(again.getTime());
+          });
+          for (var i = 0; i < moments.length; i++) {
+            if (inclusive ? moments[i] >= fromMs : moments[i] > fromMs) return new Date(moments[i]);
+          }
+        }
+        return new Date(fromMs);   // not reachable: a clock time always comes round within two days
       }
 
       function renderFall() {
@@ -1045,6 +990,7 @@
       }
 
       function renderResults() {
+        refreshTimeFormat();
         // The list is rebuilt every 15 seconds; keep keyboard focus on the same time link.
         var focusIndex = Array.prototype.indexOf.call(resultsEl.querySelectorAll('a'), document.activeElement);
         resultsEl.innerHTML = '';
@@ -1061,10 +1007,8 @@
             return;
           }
           var nowMs = Date.now();
-          // Next time the clock reads the chosen wake-up time (today or tomorrow).
-          var wake = new Date(nowMs);
-          wake.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
-          if (wake.getTime() <= nowMs) wake.setDate(wake.getDate() + 1);
+          // Next time the clock reads the chosen wake-up time (clock-change aware, see nextWallTime).
+          var wake = nextWallTime(parseInt(parts[0], 10), parseInt(parts[1], 10), nowMs, false);
           wakeAlarmStart = wake;
 
           // The green countdown goes on the best option (7h 30m) while that bedtime is still ahead;
@@ -1104,7 +1048,7 @@
               resultsEl.appendChild(noBed);
               return;
             }
-            bedtime = nextOccurrence(parseInt(bedParts[0], 10), parseInt(bedParts[1], 10), nowMinute.getTime());
+            bedtime = nextWallTime(parseInt(bedParts[0], 10), parseInt(bedParts[1], 10), nowMinute.getTime(), true);
           }
           // Same order as "Wake up at…": 6 cycles at the top down to 1 cycle at the bottom.
           for (cycles = 6; cycles >= 1; cycles--) {
@@ -1168,8 +1112,11 @@
       });
 
       // Picking a bedtime switches from "now" to that time; "↺ Now" switches back.
+      // If the time box is ever cleared (e.g. a Reset button in the iPhone time wheel), go back to
+      // the current time instead of showing an empty list.
       bedInput.addEventListener('input', function () {
-        bedChosen = true;
+        bedChosen = !!bedInput.value;
+        if (!bedChosen) bedInput.value = inputValue(new Date(Math.floor(Date.now() / 60000) * 60000));
         renderResults();
       });
       bedInput.addEventListener('blur', function () {
@@ -1184,8 +1131,11 @@
       });
 
       // Remember the last wake-up time you set (some iPhones only fire "change", so listen for both).
+      // If the box is ever cleared (e.g. a Reset button in the iPhone time wheel), put the last time back.
+      var lastWake = wakeInput.value || '08:00';
       function onWakeChange() {
-        if (wakeInput.value) save('sc-wake', wakeInput.value);
+        if (wakeInput.value) { lastWake = wakeInput.value; save('sc-wake', wakeInput.value); }
+        else wakeInput.value = lastWake;
         renderResults();
       }
       wakeInput.addEventListener('input', onWakeChange);

@@ -8,8 +8,8 @@ A simple, dark-mode web page that helps you time your sleep around 90-minute sle
 - **Wake up at…** — pick the time you want to wake up (8:00 AM to start; the app remembers the last time you set) and get bedtimes from 6 sleep cycles at the top down to 1 cycle at the bottom. A live green countdown (e.g. "in 45 mins") shows on the 7h 30m bedtime while it's still ahead, otherwise on the soonest bedtime still ahead. Bedtimes that have already passed are greyed out (pill included) and marked "passed".
 - **Time to fall asleep** — shown as "🌙 15 min to fall asleep" under the time. Tap it to open − / + buttons that change it 1 minute at a time (default 15 minutes, range 0–120); tap the value to close it again.
 - Each result shows the total sleep and number of cycles, e.g. `7h 30m of sleep · 5 cycles`. 5 and 6 cycles are marked **Recommended**: a green pill for 7h 30m (5 cycles), the best option without going over 8 hours, and an orange pill for 9h (6 cycles).
-- Dark mode only, with a warm accent colour and text that meets WCAG AA contrast.
-- The title uses [Fraunces](https://github.com/undercasetype/Fraunces) in its soft style, in pale moon yellow with a few stars. The font file (`fonts/fraunces-heading.woff2`, 11 KB) is stored in this repo under the SIL Open Font License (`fonts/OFL.txt`).
+- A night-sky look, in the style of the iOS Weather app: a deep navy gradient with hundreds of tiny stars (mostly faint, a few with a soft glow, some gently twinkling; twinkling is off with Reduce Motion), a new sky on every load, and frosted-glass cards the sky shows through. Stars never sit on text or above an "l" in the title. Dark mode only, with a warm accent colour and text that meets WCAG AA contrast.
+- The title uses [Fraunces](https://github.com/undercasetype/Fraunces) in its soft style, in pale moon yellow. The font file (`fonts/fraunces-heading.woff2`, 11 KB) is stored in this repo under the SIL Open Font License (`fonts/OFL.txt`).
 - Uses your device's 12- or 24-hour clock setting.
 - Remembers your settings on your device.
 - The **Sleep Calculator** title links back to the app's home page, like a site logo.
@@ -19,6 +19,8 @@ A simple, dark-mode web page that helps you time your sleep around 90-minute sle
 
 - **Bedtime** = wake-up time − (cycles × 90 min) − time to fall asleep
 - **Wake-up time** = now + time to fall asleep + (cycles × 90 min)
+
+Clock changes and time zones are handled the standard way: lengths of time (cycles, falling asleep, the 5-minute alarm spacing) are real elapsed minutes; "the next 7:00 AM" is worked out fresh from the calendar date; a time skipped when clocks go forward (e.g. 2:30 AM) moves forward to 3:30 AM, and a time repeated when clocks go back (e.g. 1:30 AM) uses the first one still ahead; and times always follow the device's current time zone, even if it changes while the page is open. This was checked against the IANA time-zone database in 15 US time zones (including Arizona, Hawaii, Alaska and the territories) across both clock changes.
 
 Cycle length varies from person to person; treat the results as a guide, not medical advice.
 
