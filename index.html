@@ -642,7 +642,7 @@
       <input type="time" id="bed-time" required>
     </section>
 
-    <h2 class="results-title" id="results-title">Go to bed at</h2>
+    <h2 class="results-title" id="results-title">Best times to wake up</h2>
     <ul class="results" id="results" aria-labelledby="results-title"></ul>
 
     <!-- Shown on Apple devices only (see IS_APPLE in the script). -->
@@ -997,7 +997,7 @@
         var cycles;
 
         if (mode === 'wake') {
-          resultsTitle.textContent = 'Go to bed at';
+          resultsTitle.textContent = 'Best times to go to bed';
           var parts = (wakeInput.value || '').split(':');
           if (parts.length !== 2) {
             var empty = document.createElement('li');
@@ -1030,7 +1030,7 @@
           }
           fitNextCard();
         } else {
-          resultsTitle.textContent = 'Wake up at';
+          resultsTitle.textContent = 'Best times to wake up';
           bedLabel.textContent = bedChosen ? 'If you go to bed at' : 'If you go to bed now';
           bedReset.hidden = !bedChosen;
           // Start of the current minute (whole-minute arithmetic, so clock changes can't shift it).
